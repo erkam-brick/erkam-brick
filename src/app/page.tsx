@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { ArrowDown, Menu, X, ExternalLink, Github, Instagram, Twitter, Search, Heart, Shield, Clock, Cuboid, Play, Download, MessageSquare, User, LogOut } from "lucide-react";
 import { useState, useMemo } from "react";
 import { PROJECTS, CATEGORIES, POWERED_UP_MOTORS } from "../data/projects";
@@ -101,9 +102,11 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-            <img
+            <Image
               src="/logo.png"
               alt="ERKAM BRICK Logo"
+              width={200}
+              height={64}
               className="h-16 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform duration-200"
             />
             <div className="flex flex-col leading-tight">

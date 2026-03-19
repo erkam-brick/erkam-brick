@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -23,9 +24,11 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <img
+            <Image
               src="/logo.png"
               alt="ERKAM BRICK Logo"
+              width={200}
+              height={64}
               className="h-16 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform duration-200"
             />
             <div className="flex flex-col leading-tight">
