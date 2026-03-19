@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #09090b;
+  --primary-red: #E3000B;
+  --primary-blue: #0055BF;
+  --primary-yellow: #F6D105;
+  --primary-green: #237841;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-lego-red: var(--primary-red);
+  --color-lego-blue: var(--primary-blue);
+  --color-lego-yellow: var(--primary-yellow);
+  --color-lego-green: var(--primary-green);
+  --font-sans: var(--font-outfit);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #09090b;
+    --foreground: #fafafa;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  overflow-x: hidden;
+}
