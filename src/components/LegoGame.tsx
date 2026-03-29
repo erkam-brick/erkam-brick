@@ -19,10 +19,10 @@ const COLORS = [
 ];
 
 const BRICK_HEIGHT = 24;
-const BRICK_WIDTHS = [2, 3, 4]; // In grid units (1 unit = 24px)
+const BRICK_WIDTHS = [1, 2, 3, 4]; // In grid units (1 unit = 24px)
 const GRID_UNIT = 24;
-const BOARD_WIDTH = 300;
-const BOARD_HEIGHT = 400;
+const BOARD_WIDTH = 288;
+const BOARD_HEIGHT = 384;
 
 export default function LegoGame() {
   const [bricks, setBricks] = useState<Brick[]>([]);
@@ -106,6 +106,24 @@ export default function LegoGame() {
     return false;
   };
 
+  const checkAndClearRows = (currentBricks: Brick[]) => {
+    let rowsCleared = 0;
+    let newBricks = [...currentBricks];
+
+    for (let y = BOARD_HEIGHT - GRID_UNIT; y >= 0; y -= GRID_UNIT) {
+      const rowBricks = newBricks.filter(b => Math.abs(b.y - y) < 1);
+      const rowWidth = rowBricks.reduce((sum, b) => sum + b.width, 0);
+
+      if (rowWidth >= BOARD_WIDTH) { // full row
+        rowsCleared++;
+        newBricks = newBricks.filter(b => Math.abs(b.y - y) >= 1);
+        newBricks = newBricks.map(b => b.y < y ? { ...b, y: b.y + GRID_UNIT } : b);
+        y += GRID_UNIT; // check same physical row again
+      }
+    }
+    return { newBricks, rowsCleared };
+  };
+
   const dropBrick = () => {
      setCurrentBrick(prev => {
          if(!prev) return prev;
@@ -120,8 +138,12 @@ export default function LegoGame() {
             return prev;
          }
 
-         setBricks(old => [...old, { ...prev, y: newY }]);
-         setScore(s => s + 10);
+         setBricks(old => {
+            const lockedBricks = [...old, { ...prev, y: newY }];
+            const { newBricks, rowsCleared } = checkAndClearRows(lockedBricks);
+            setScore(s => s + 10 + rowsCleared * 30);
+            return newBricks;
+         });
          spawnBrick();
          return null;
      });
@@ -145,8 +167,12 @@ export default function LegoGame() {
             return prev;
           }
           
-          setBricks(old => [...old, { ...prev, y: prev.y }]);
-          setScore(s => s + 10);
+          setBricks(old => {
+             const lockedBricks = [...old, { ...prev, y: prev.y }];
+             const { newBricks, rowsCleared } = checkAndClearRows(lockedBricks);
+             setScore(s => s + 10 + rowsCleared * 30);
+             return newBricks;
+          });
           setTimeout(spawnBrick, 50);
           return null;
         }

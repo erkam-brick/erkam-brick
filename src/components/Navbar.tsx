@@ -10,6 +10,7 @@ import { Menu, X } from "lucide-react";
 const NAV_LINKS = [
   { href: "/galeri", label: "Galeri" },
   { href: "/motorlar", label: "Powered UP" },
+  { href: "/#games", label: "Oyunlar" },
   { href: "/bilgi", label: "Bilgi Köşesi" },
   { href: "/hakkimda", label: "Hakkımda" },
 ];

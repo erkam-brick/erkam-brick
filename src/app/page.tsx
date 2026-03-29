@@ -2,11 +2,14 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { ArrowDown, Menu, X, ExternalLink, Github, Instagram, Twitter, Search, Heart, Shield, Clock, Cuboid, Play, Download, MessageSquare, User, LogOut } from "lucide-react";
+import { ArrowDown, Menu, X, ExternalLink, Github, Instagram, Twitter, Search, Heart, Shield, Clock, Cuboid, Play, Download, MessageSquare, User, LogOut, Trophy } from "lucide-react";
 import { useState, useMemo } from "react";
 import { PROJECTS, CATEGORIES, POWERED_UP_MOTORS } from "../data/projects";
 import ProjectModal from "../components/ProjectModal";
 import LegoGame from "../components/LegoGame";
+import LegoBuilder from "../components/LegoBuilder";
+import LegoPuzzle from "../components/LegoPuzzle";
+import LegoBattle from "../components/LegoBattle";
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -23,6 +26,14 @@ export default function Home() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+
+  // Game State
+  const [activeGame, setActiveGame] = useState<"builder" | "puzzle" | "battle" | "drop">("builder");
+  const [communityBuilds, setCommunityBuilds] = useState([
+    { id: 1, name: "Modern Villa", author: "LegoMaster_99", likes: 124, category: "Şehir", color: "bg-lego-blue" },
+    { id: 2, name: "Hızlı Yarışçı", author: "BrickBuilder", likes: 89, category: "Technic", color: "bg-lego-red" },
+    { id: 3, name: "Uzay İstasyonu", author: "GalaksyLego", likes: 210, category: "Uzay", color: "bg-lego-yellow" },
+  ]);
 
   const isPoweredUpActive = activeCategory === "Powered UP";
   const isTechnicCityActive = activeCategory === "Technic-City";
@@ -118,6 +129,7 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-8 font-medium">
             <a href="#gallery" className="hover:text-lego-blue transition-colors">Galeri</a>
             <a href="#knowledge" className="hover:text-lego-red transition-colors">Bilgi Köşesi</a>
+            <a href="#games" className="hover:text-lego-purple px-3 py-1 bg-lego-red/10 rounded-full transition-colors animate-pulse">Oyunlar 🎮</a>
             <a href="#about" className="hover:text-lego-yellow transition-colors">Hakkımda</a>
             <a href="#contact" className="hover:text-lego-green transition-colors">İletişim</a>
           </div>
@@ -172,6 +184,7 @@ export default function Home() {
             )}
             <a href="#gallery" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-blue">Galeri</a>
             <a href="#knowledge" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-red">Bilgi Köşesi</a>
+            <a href="#games" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-red flex items-center gap-2">Oyunlar <span className="text-sm bg-lego-red text-white px-2 py-0.5 rounded-full">Yeni</span></a>
             <a href="#about" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-yellow">Hakkımda</a>
             <a href="#contact" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-green">İletişim</a>
             <button onClick={() => { handleRandomBuild(); setIsMenuOpen(false) }} className="w-full mt-4 px-4 py-3 text-lg font-semibold rounded-xl border-2 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 transition-colors flex items-center justify-center gap-2">
@@ -471,6 +484,116 @@ export default function Home() {
 
 
 
+      {/* Mini Games & Social Section */}
+      <section id="games" className="py-24 px-6 bg-zinc-100 dark:bg-zinc-900 border-y border-zinc-200 dark:border-zinc-800">
+        <div className="max-w-7xl mx-auto flex flex-col items-center">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-4">LEGO UNIVERSE 🚀</h2>
+            <p className="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
+               Bir yapıcı ol, bir savaşçı ol veya bir bulmaca dehası ol. LEGO Dünyası senin elinde!
+            </p>
+            
+            <div className="flex flex-wrap items-center justify-center bg-white dark:bg-black p-1.5 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 mt-10 gap-1 lg:inline-flex">
+              {[
+                { id: "builder", label: "🏗️ Builder", color: "bg-lego-blue" },
+                { id: "puzzle", label: "🧩 Puzzle", color: "bg-lego-yellow text-black" },
+                { id: "battle", label: "⚔️ Savaş", color: "bg-zinc-800" },
+                { id: "drop", label: "🧱 Drop", color: "bg-lego-green" }
+              ].map(game => (
+                <button
+                  key={game.id}
+                  onClick={() => setActiveGame(game.id as any)}
+                  className={`px-6 py-3 rounded-2xl text-sm font-black transition-all ${
+                    activeGame === game.id 
+                    ? `${game.color} ${game.color.includes('yellow') ? 'text-black' : 'text-white'} shadow-xl scale-105` 
+                    : "text-zinc-500 hover:text-foreground hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  }`}
+                >
+                  {game.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <motion.div 
+            key={activeGame}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full"
+          >
+            {activeGame === "builder" && <LegoBuilder user={user} onRequireLogin={() => setIsLoginModalOpen(true)} />}
+            {activeGame === "puzzle" && <LegoPuzzle />}
+            {activeGame === "battle" && <LegoBattle />}
+            {activeGame === "drop" && <LegoGame />}
+          </motion.div>
+
+          {/* Social Features */}
+          <div className="w-full mt-24">
+            <div className="flex flex-col md:flex-row items-end justify-between mb-12 gap-6">
+               <div>
+                  <h3 className="text-3xl font-black mb-2">Topluluk Galerisi</h3>
+                  <p className="text-zinc-500 font-medium">Usta Yapıcıların en çok beğenilen tasarımları.</p>
+               </div>
+               <div className="flex bg-lego-red text-white px-6 py-4 rounded-3xl items-center gap-4 shadow-xl shadow-lego-red/10 animate-pulse cursor-pointer">
+                  <div className="p-2 bg-white/20 rounded-xl"><Trophy size={24} /></div>
+                  <div>
+                     <p className="font-black leading-none text-sm uppercase tracking-wider text-red-100">Haftalık Challenge</p>
+                     <p className="font-bold">🚀 10 Parça ile En Yüksek Kuleyi İnşa Et!</p>
+                  </div>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+               {communityBuilds.map(build => (
+                  <motion.div 
+                    key={build.id}
+                    whileHover={{ y: -10 }}
+                    className="bg-white dark:bg-black rounded-[2.5rem] p-8 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-2xl transition-all"
+                  >
+                     <div className={`aspect-square rounded-[2rem] ${build.color} mb-6 flex items-center justify-center relative overflow-hidden group`}>
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                        <Cuboid size={80} className="text-white drop-shadow-2xl group-hover:scale-110 transition-transform" />
+                        <div className="absolute top-4 left-4 bg-white/20 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black text-white uppercase">{build.category}</div>
+                     </div>
+                     <h4 className="text-xl font-black mb-1">{build.name}</h4>
+                     <p className="text-sm text-zinc-500 font-bold mb-6">Yazar: <span className="text-lego-blue">@{build.author}</span></p>
+                     <div className="flex items-center justify-between pt-6 border-t border-zinc-50 dark:border-zinc-900">
+                        <div className="flex -space-x-2">
+                           {[1,2,3].map(i => <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-black bg-zinc-200 dark:bg-zinc-800" />)}
+                           <div className="w-8 h-8 rounded-full border-2 border-white dark:border-black bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center text-[10px] font-bold">+12</div>
+                        </div>
+                        <button className="flex items-center gap-2 px-5 py-2.5 bg-zinc-100 dark:bg-zinc-900 rounded-2xl hover:bg-lego-red hover:text-white transition-all text-sm font-black group">
+                           <Heart size={18} className="group-hover:fill-current" /> {build.likes}
+                        </button>
+                     </div>
+                  </motion.div>
+               ))}
+            </div>
+            
+            <div className="mt-16 text-center">
+               {user ? (
+                 <button 
+                   onClick={() => {
+                     setActiveGame("builder");
+                     document.getElementById('games')?.scrollIntoView({ behavior: 'smooth' });
+                   }} 
+                   className="px-10 py-5 bg-lego-blue text-white font-black rounded-[2rem] hover:scale-105 active:scale-95 transition-all shadow-xl inline-flex items-center gap-3"
+                 >
+                    <Cuboid size={24} /> Yeni Tasarım Paylaş
+                 </button>
+               ) : (
+                 <button 
+                   onClick={() => setIsLoginModalOpen(true)} 
+                   className="px-10 py-5 bg-foreground text-background font-black rounded-[2rem] hover:scale-105 active:scale-95 transition-all shadow-xl inline-flex items-center gap-3"
+                 >
+                    <User size={24} /> Kendi Yapını Paylaşmak İçin Giriş Yap
+                 </button>
+               )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Knowledge Base Section */}
       <section id="knowledge" className="py-24 px-6 bg-white dark:bg-black">
          <div className="max-w-7xl mx-auto">
@@ -687,6 +810,18 @@ export default function Home() {
           </motion.div>
         </div>
       )}
+      {/* Floating Game Shortcut */}
+      <motion.a
+        href="#games"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed bottom-8 right-8 z-[60] w-14 h-14 bg-lego-red text-white rounded-2xl shadow-2xl flex items-center justify-center border-4 border-white dark:border-zinc-800 hover:bg-red-600 transition-colors group px-0"
+      >
+        <span className="group-hover:hidden"><Play fill="currentColor" size={24} /></span>
+        <span className="hidden group-hover:block font-black text-xs">OYNA!</span>
+      </motion.a>
     </div>
   );
 }
