@@ -45,6 +45,20 @@ export default function Home() {
     { id: 3, name: "Uzay İstasyonu", author: "GalaksyLego", likes: 210, category: "Uzay", color: "bg-lego-yellow" },
   ]);
 
+  // Secret Quest State
+  const [foundSecrets, setFoundSecrets] = useState<string[]>([]);
+  const [showRewardModal, setShowRewardModal] = useState(false);
+
+  const handleSecretFound = (secretId: string) => {
+    if (!foundSecrets.includes(secretId)) {
+      const newSecrets = [...foundSecrets, secretId];
+      setFoundSecrets(newSecrets);
+      if (newSecrets.length === 3) {
+        setTimeout(() => setShowRewardModal(true), 500);
+      }
+    }
+  };
+
   const isPoweredUpActive = activeCategory === "Powered UP";
   const isTechnicCityActive = activeCategory === "Technic-City";
   const isTechnicActive = activeCategory === "Technic";
@@ -225,6 +239,15 @@ export default function Home() {
 
       {/* Hero Section */}
       <main className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden flex flex-col items-center justify-center min-h-[90vh]">
+        
+        {/* Hidden Secret Item 1: Golden Brick */}
+        <motion.button 
+          whileHover={{ scale: 1.2 }}
+          onClick={() => handleSecretFound("golden_brick")}
+          className={`absolute top-40 left-[15%] w-8 h-4 rounded-sm bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.8)] z-20 transition-all duration-500 ${foundSecrets.includes("golden_brick") ? "opacity-0 scale-150 pointer-events-none" : "opacity-10 hover:opacity-100 cursor-pointer"}`}
+          title="Gizli Altın Tuğla"
+        />
+
         {/* Decorative Blocks */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
@@ -655,8 +678,14 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.1 }}
-                  className="bg-zinc-50 dark:bg-zinc-900 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-800 hover:scale-105 transition-transform"
+                  className="bg-zinc-50 dark:bg-zinc-900 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-800 hover:scale-105 transition-transform relative"
                >
+                  {/* Hidden Secret Item 2: Silver Gear */}
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleSecretFound("silver_gear"); }}
+                    className={`absolute bottom-6 right-6 w-6 h-6 bg-zinc-300 rounded-full border-2 border-dashed border-zinc-400 shadow-[0_0_10px_rgba(212,212,216,0.8)] z-20 transition-all duration-500 ${foundSecrets.includes("silver_gear") ? "opacity-0 scale-150 pointer-events-none" : "opacity-10 hover:opacity-100 cursor-pointer"}`}
+                    title="Gizli Gümüş Dişli"
+                  />
                   <div className="w-14 h-14 bg-lego-red rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-lego-red/20">
                      <Cuboid size={28} />
                   </div>
@@ -739,6 +768,13 @@ export default function Home() {
               {/* Lego Stud decorations */}
               <div className="absolute top-4 left-4 w-6 h-6 rounded-full bg-lego-red shadow-inner opacity-80" />
               <div className="absolute bottom-4 right-4 w-6 h-6 rounded-full bg-lego-blue shadow-inner opacity-80" />
+              
+              {/* Hidden Secret Item 3: Crystal Gem */}
+              <button
+                onClick={() => handleSecretFound("crystal_gem")}
+                className={`absolute top-4 right-4 w-6 h-6 rotate-45 bg-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.9)] z-20 transition-all duration-500 ${foundSecrets.includes("crystal_gem") ? "opacity-0 scale-150 pointer-events-none" : "opacity-20 hover:opacity-100 cursor-pointer"}`}
+                title="Gizli Kristal"
+              />
             </motion.div>
           </div>
           <div className="w-full md:w-1/2">
@@ -937,6 +973,90 @@ export default function Home() {
         <span className="group-hover:hidden"><Play fill="currentColor" size={24} /></span>
         <span className="hidden group-hover:block font-black text-xs">OYNA!</span>
       </motion.a>
+
+      {/* Secret Quest Tracker */}
+      <div className="fixed bottom-24 right-8 z-40 flex flex-col items-end gap-2 pointer-events-none">
+        {showRewardModal ? null : (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/90 dark:bg-black/90 backdrop-blur-md px-5 py-3 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 pointer-events-auto flex items-center gap-4 cursor-help group"
+          >
+            <div className="p-2 bg-lego-yellow/20 rounded-xl text-lego-yellow group-hover:scale-110 transition-transform">
+              <Search size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">GİZLİ GÖREV</p>
+              <p className="font-bold text-sm">Parçaları Bul: <span className={foundSecrets.length === 3 ? "text-lego-green" : "text-lego-yellow"}>{foundSecrets.length}/3</span></p>
+            </div>
+            
+            {/* Tooltip */}
+            <div className="absolute bottom-full right-0 mb-4 w-64 bg-zinc-900 text-white text-xs p-4 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity shadow-xl pointer-events-none">
+              Siteye gizlenmiş 3 özel parçayı (Altın Tuğla, Gümüş Dişli, Kristal) bul ve Usta Kaşif ödülünü kazan! Sadece gerçek dikkatli yapıcılar bulabilir. 🔍
+              <div className="absolute -bottom-2 right-8 w-4 h-4 bg-zinc-900 rotate-45" />
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Secret Quest Reward Modal */}
+      <AnimatePresence>
+        {showRewardModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-zinc-950 text-white w-full max-w-md rounded-[2.5rem] p-8 text-center border border-zinc-800 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-lego-red via-lego-yellow to-lego-blue" />
+              
+              {/* Confetti simulation elements */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                 {[...Array(12)].map((_, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ y: -50, x: 150, opacity: 1 }}
+                      animate={{ y: 600, x: Math.random() * 400 - 200, rotate: Math.random() * 360 }}
+                      transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }}
+                      className={`absolute w-3 h-3 ${['bg-lego-red', 'bg-lego-blue', 'bg-lego-yellow', 'bg-lego-green'][i % 4]}`}
+                      style={{ left: `${Math.random() * 100}%` }}
+                    />
+                 ))}
+              </div>
+
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 0.6 }}
+                className="text-8xl mb-6 relative z-10"
+              >
+                🏆
+              </motion.div>
+              
+              <h2 className="text-3xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 relative z-10">USTA KAŞİF!</h2>
+              <p className="text-zinc-400 mb-8 relative z-10">
+                Tebrikler! Siteye gizlenmiş tüm parçaları buldun ve gerçek bir Usta Yapıcı olduğunu kanıtladın.
+              </p>
+              
+              <div className="bg-zinc-900 rounded-2xl p-6 mb-8 border border-zinc-800 relative z-10">
+                <p className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-2">Açılan Özel Rozet</p>
+                <div className="flex items-center justify-center gap-3">
+                  <Shield className="text-lego-blue" size={24} />
+                  <span className="font-bold text-lg">Kartal Gözlü Yapıcı</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowRewardModal(false)}
+                className="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-zinc-200 transition-colors relative z-10"
+              >
+                GÖREVİ TAMAMLA
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
