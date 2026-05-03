@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { ArrowDown, Menu, X, ExternalLink, Github, Instagram, Twitter, Search, Heart, Shield, Clock, Cuboid, Play, Download, MessageSquare, User, LogOut, Trophy } from "lucide-react";
 import { useState, useMemo } from "react";
@@ -10,6 +10,7 @@ import LegoGame from "../components/LegoGame";
 import LegoBuilder from "../components/LegoBuilder";
 import LegoPuzzle from "../components/LegoPuzzle";
 import LegoBattle from "../components/LegoBattle";
+import SurpriseBox from "../components/SurpriseBox";
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,9 +28,18 @@ export default function Home() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
+  // Share Modal State
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareName, setShareName] = useState("");
+  const [shareCategory, setShareCategory] = useState("Şehir");
+  const [shareImageUrl, setShareImageUrl] = useState("");
+
+  // Surprise Box State
+  const [isSurpriseBoxOpen, setIsSurpriseBoxOpen] = useState(false);
+
   // Game State
   const [activeGame, setActiveGame] = useState<"builder" | "puzzle" | "battle" | "drop">("builder");
-  const [communityBuilds, setCommunityBuilds] = useState([
+  const [communityBuilds, setCommunityBuilds] = useState<Array<{id: number, name: string, author: string, likes: number, category: string, color: string, imageUrl?: string}>>([
     { id: 1, name: "Modern Villa", author: "LegoMaster_99", likes: 124, category: "Şehir", color: "bg-lego-blue" },
     { id: 2, name: "Hızlı Yarışçı", author: "BrickBuilder", likes: 89, category: "Technic", color: "bg-lego-red" },
     { id: 3, name: "Uzay İstasyonu", author: "GalaksyLego", likes: 210, category: "Uzay", color: "bg-lego-yellow" },
@@ -105,6 +115,25 @@ export default function Home() {
 
   const handleLogout = () => {
     setUser(null);
+  };
+
+  const handleShare = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (shareName.trim() && shareImageUrl.trim()) {
+      const newBuild = {
+        id: Date.now(),
+        name: shareName,
+        author: user || "Misafir",
+        likes: 0,
+        category: shareCategory,
+        color: "bg-zinc-800",
+        imageUrl: shareImageUrl
+      };
+      setCommunityBuilds([newBuild, ...communityBuilds]);
+      setIsShareModalOpen(false);
+      setShareName("");
+      setShareImageUrl("");
+    }
   };
 
   return (
@@ -267,6 +296,15 @@ export default function Home() {
             >
               Usta Yapıcı Hakkında
             </a>
+            <button
+              onClick={() => setIsSurpriseBoxOpen(true)}
+              className="relative px-8 py-4 rounded-full font-bold bg-gradient-to-r from-lego-yellow to-amber-400 text-black hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-300/30 w-full sm:w-auto justify-center flex items-center gap-2 overflow-hidden group"
+            >
+              <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
+              🎁 Sürpriz Kutu
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-lego-red rounded-full animate-ping" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-lego-red rounded-full" />
+            </button>
           </motion.div>
         </div>
       </main>
@@ -551,9 +589,13 @@ export default function Home() {
                     className="bg-white dark:bg-black rounded-[2.5rem] p-8 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-2xl transition-all"
                   >
                      <div className={`aspect-square rounded-[2rem] ${build.color} mb-6 flex items-center justify-center relative overflow-hidden group`}>
-                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
-                        <Cuboid size={80} className="text-white drop-shadow-2xl group-hover:scale-110 transition-transform" />
-                        <div className="absolute top-4 left-4 bg-white/20 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black text-white uppercase">{build.category}</div>
+                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors z-10" />
+                        {build.imageUrl ? (
+                           <img src={build.imageUrl} alt={build.name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        ) : (
+                           <Cuboid size={80} className="text-white drop-shadow-2xl group-hover:scale-110 transition-transform z-0" />
+                        )}
+                        <div className="absolute top-4 left-4 bg-white/20 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black text-white uppercase z-20">{build.category}</div>
                      </div>
                      <h4 className="text-xl font-black mb-1">{build.name}</h4>
                      <p className="text-sm text-zinc-500 font-bold mb-6">Yazar: <span className="text-lego-blue">@{build.author}</span></p>
@@ -574,12 +616,11 @@ export default function Home() {
                {user ? (
                  <button 
                    onClick={() => {
-                     setActiveGame("builder");
-                     document.getElementById('games')?.scrollIntoView({ behavior: 'smooth' });
+                     setIsShareModalOpen(true);
                    }} 
                    className="px-10 py-5 bg-lego-blue text-white font-black rounded-[2rem] hover:scale-105 active:scale-95 transition-all shadow-xl inline-flex items-center gap-3"
                  >
-                    <Cuboid size={24} /> Yeni Tasarım Paylaş
+                    <Cuboid size={24} /> Fotoğraf Paylaş
                  </button>
                ) : (
                  <button 
@@ -755,6 +796,13 @@ export default function Home() {
          />
       )}
 
+      {/* Surprise Box Modal */}
+      <AnimatePresence>
+        {isSurpriseBoxOpen && (
+          <SurpriseBox onClose={() => setIsSurpriseBoxOpen(false)} />
+        )}
+      </AnimatePresence>
+
       {/* Login Modal */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -810,6 +858,73 @@ export default function Home() {
           </motion.div>
         </div>
       )}
+
+      {/* Share Modal */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+          >
+            <div className="p-6 md:p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Yeni Fotoğraf Paylaş</h2>
+                <button onClick={() => setIsShareModalOpen(false)} className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleShare} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Tasarım Adı</label>
+                  <input
+                    type="text"
+                    required
+                    value={shareName}
+                    onChange={(e) => setShareName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-lego-blue transition-all"
+                    placeholder="Örn: Uzay Gemisi"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Kategori</label>
+                  <select
+                    value={shareCategory}
+                    onChange={(e) => setShareCategory(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-lego-blue transition-all"
+                  >
+                    {CATEGORIES.filter(c => c !== "Tümü").map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Fotoğraf URL (Diğer sitelerden)</label>
+                  <input
+                    type="url"
+                    required
+                    value={shareImageUrl}
+                    onChange={(e) => setShareImageUrl(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-lego-blue transition-all"
+                    placeholder="https://ornek-site.com/foto.jpg"
+                  />
+                </div>
+                {shareImageUrl && (
+                  <div className="mt-2 aspect-video rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 relative flex items-center justify-center">
+                     <img src={shareImageUrl} alt="Önizleme" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} onLoad={(e) => (e.currentTarget.style.display = 'block')} />
+                     <p className="absolute inset-0 flex items-center justify-center text-xs text-zinc-500 font-medium -z-10">Önizleme Yüklenemedi</p>
+                  </div>
+                )}
+                <button type="submit" className="w-full py-3 mt-4 bg-lego-blue text-white font-bold rounded-xl hover:bg-blue-700 hover:shadow-lg transition-all active:scale-95">
+                  Paylaş
+                </button>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Floating Game Shortcut */}
       <motion.a
         href="#games"
