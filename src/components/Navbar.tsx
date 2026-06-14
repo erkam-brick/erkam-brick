@@ -8,11 +8,11 @@ import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
+  { href: "/evren", label: "Evren" },
   { href: "/galeri", label: "Galeri" },
-  { href: "/motorlar", label: "Powered UP" },
-  { href: "/#games", label: "Oyunlar" },
-  { href: "/bilgi", label: "Bilgi Köşesi" },
-  { href: "/hakkimda", label: "Hakkımda" },
+  { href: "/haberler", label: "Haber Merkezi" },
+  { href: "/oyunlar", label: "Etkileşim & Oyunlar" },
+  { href: "/medya", label: "Medya" },
 ];
 
 export default function Navbar() {

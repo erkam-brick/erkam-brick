@@ -70,49 +70,74 @@ export default function LegoPuzzle() {
         </div>
       </div>
 
-      <div className="relative w-full max-w-2xl h-[300px] bg-zinc-50 dark:bg-zinc-950 rounded-3xl border-4 border-dashed border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
-        {/* The target silhouette - isometric-ish */}
-        <div 
-          className="relative transform-gpu"
-          style={{ transform: `perspective(1000px) rotateX(45deg) rotateZ(45deg)` }}
-        >
-          {model.pieces.map((p: any) => (
-            <div
-              key={p.id}
-              onClick={() => placePiece(p.id)}
-              className={`absolute transition-all duration-500 cursor-pointer ${
-                placedPieces.includes(p.id) 
-                  ? "opacity-100 scale-100" 
-                  : "opacity-20 scale-110 grayscale blur-[2px] hover:opacity-40"
-              }`}
-              style={{
-                left: p.x * 30,
-                top: p.y * 30,
-                width: 30 * (p.type === '4x2' ? 4 : 2),
-                height: 30 * (p.type === '2x2' ? 2 : 2),
-                backgroundColor: p.color,
-                zIndex: p.z || 0,
-                transform: `translateZ(${(p.z || 0) * 15}px)`,
-                borderRadius: '4px',
-                border: '2px solid rgba(0,0,0,0.1)'
-              }}
-            >
-               {/* Studs */}
-               <div className="grid grid-cols-2 grid-rows-2 h-full p-0.5">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-white/20 m-auto" />
-                  ))}
-               </div>
+      <div className="relative w-full max-w-2xl h-[360px] bg-zinc-50 dark:bg-zinc-950 rounded-3xl border-4 border-dashed border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        {/* Centered isometric puzzle grid */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          {/* -50px compensates for the visual downshift caused by rotateX perspective */}
+          <div style={{ transform: 'translateY(-50px)' }}>
+            <div style={{ transform: `perspective(800px) rotateX(45deg) rotateZ(45deg)` }}>
+            {/* Wrapper with fixed size — pieces centered within it */}
+            <div className="relative" style={{ width: 240, height: 240 }}>
+              {model.pieces.map((p: any) => (
+                <div
+                  key={p.id}
+                  onClick={() => placePiece(p.id)}
+                  className={`absolute transition-all duration-500 cursor-pointer ${
+                    placedPieces.includes(p.id) 
+                      ? "opacity-100 scale-100" 
+                      : "opacity-20 scale-110 grayscale blur-[2px] hover:opacity-50"
+                  }`}
+                  style={{
+                    left: p.x * 30,
+                    top: p.y * 30,
+                    width: 30 * (p.type === '4x2' ? 4 : 2),
+                    height: 30 * 2,
+                    backgroundColor: p.color,
+                    zIndex: p.z || 0,
+                    transform: `translateZ(${(p.z || 0) * 15}px)`,
+                    borderRadius: '4px',
+                    border: '2px solid rgba(0,0,0,0.15)'
+                  }}
+                >
+                  {/* Studs */}
+                  <div className="grid grid-cols-2 grid-rows-2 h-full p-1 gap-0.5">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="w-full h-full rounded-full bg-white/25" />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
+      </div>
 
+        {/* Hint text pinned to bottom, doesn't affect centering */}
         {!isWin && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur px-6 py-2 rounded-full border border-zinc-200 dark:border-zinc-800 text-sm font-bold">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur px-5 py-2 rounded-full border border-zinc-200 dark:border-zinc-800 text-sm font-bold whitespace-nowrap">
             Eksik parçaların üzerine tıklayarak modeli tamamla!
           </div>
         )}
+
+        {/* Progress inside the frame */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-2 items-center bg-white/70 dark:bg-zinc-900/70 backdrop-blur px-4 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">
+          {model.pieces.map((p) => (
+            <div
+              key={p.id}
+              className={`w-5 h-5 rounded-full border-2 transition-all duration-300 ${
+                placedPieces.includes(p.id)
+                  ? "border-lego-green scale-110"
+                  : "border-zinc-300 dark:border-zinc-700"
+              }`}
+              style={{ backgroundColor: placedPieces.includes(p.id) ? p.color : undefined }}
+            />
+          ))}
+          <span className="text-xs font-black text-zinc-500 ml-1">
+            {placedPieces.length}/{model.pieces.length}
+          </span>
+        </div>
       </div>
+
 
       {isWin && (
         <motion.div 

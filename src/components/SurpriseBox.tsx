@@ -2,232 +2,555 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ExternalLink, RefreshCw, Cuboid, Clock } from "lucide-react";
+import { X, ExternalLink, RefreshCw, ArrowRight } from "lucide-react";
 
-const SURPRISE_BUILDS = [
+const TECHNIC_BUILDS = [
   {
-    id: 1,
-    title: "Uzay Roketi",
-    emoji: "🚀",
-    category: "Uzay",
-    pieces: "1,247",
-    buildTime: "8 saat",
-    difficulty: "Usta",
-    description: "Detaylı egzoz nozulları, katlanabilir kanatlar ve gerçekçi yakıt tankları ile donatılmış bu uzay roketi, Technic mekanik sistemi kullanılarak tamamen fonksiyonel yapılmıştır.",
-    color: "from-slate-800 to-blue-900",
-    accent: "#3B82F6",
-    fun_fact: "Gerçek Apollo roketinin 1/100 ölçeğinde!",
-    image: "https://images.unsplash.com/photo-1517976487492-5750f3195933?w=600&q=80",
-  },
-  {
-    id: 2,
-    title: "Orta Çağ Kalesi",
-    emoji: "🏰",
-    category: "Tarih",
-    pieces: "3,482",
-    buildTime: "24 saat",
-    difficulty: "Usta",
-    description: "İşlevsel köprü kapısı, gizli tünel geçitleri ve çelik kapılar içeren bu Orta Çağ kalesi, SNOT tekniğiyle inşa edilmiş granit doku detaylarıyla şaşırtıcı derecede gerçekçidir.",
-    color: "from-stone-700 to-stone-900",
-    accent: "#D97706",
-    fun_fact: "Tüm duvarlarda SNOT tekniği kullanıldı!",
-    image: "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=600&q=80",
-  },
-  {
-    id: 3,
-    title: "Neon Şehir",
-    emoji: "🌆",
-    category: "Şehir",
-    pieces: "2,156",
-    buildTime: "18 saat",
-    difficulty: "Orta",
-    description: "Siberpunk estetiğiyle inşa edilmiş bu fütüristik şehir modeli, Powered UP LED modülleriyle parlayan tabelalar, işlek sokaklarda hareket eden araçlar ve çok katlı binalara sahiptir.",
-    color: "from-purple-900 to-pink-900",
-    accent: "#EC4899",
-    fun_fact: "44 adet Powered UP LED ışık kullanıldı!",
-    image: "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=600&q=80",
-  },
-  {
-    id: 4,
-    title: "Dev T-Rex",
-    emoji: "🦕",
-    category: "Hayvanlar",
-    pieces: "1,893",
-    buildTime: "14 saat",
-    difficulty: "Orta",
-    description: "Hareket eden çene, birleştirilebilir kuyruk ve şaşırtıcı doku detayları ile tam eklemli T-Rex. Technic iç iskeleti sayesinde birçok pozisyonda sabitlenebilir.",
-    color: "from-green-800 to-emerald-950",
-    accent: "#10B981",
-    fun_fact: "Çenesi gerçekten kapanıp açılıyor!",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
-  },
-  {
-    id: 5,
-    title: "Yelkenli Gemi",
-    emoji: "⛵",
-    category: "Deniz",
-    pieces: "987",
-    buildTime: "6 saat",
-    difficulty: "Kolay",
-    description: "17. yüzyıl ticaret gemilerinden ilham alınan bu yelkenli, el yapımı kumaş yelkenleri, ip halatları ve gerçekçi güverte mobilyaları ile tamamlanmış bir deniz şaheseridir.",
-    color: "from-sky-700 to-sky-950",
-    accent: "#0EA5E9",
-    fun_fact: "Yelkenler gerçek kumaştan yapılmış!",
-    image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&q=80",
-  },
-  {
-    id: 6,
-    title: "Micro Japonya Köyü",
-    emoji: "🏯",
-    category: "Mikro",
-    pieces: "612",
-    buildTime: "4 saat",
-    difficulty: "Kolay",
-    description: "Mikro ölçekte bir Japon köyü: pagoda tapınakları, kiraz çiçeği bahçeleri, köprüler ve geleneksel çatı detayları. Küçük ama inanılmaz detay zenginliğine sahip bir eser.",
-    color: "from-rose-800 to-red-950",
-    accent: "#F43F5E",
-    fun_fact: "En küçük parça sadece 1x1 tile!",
-    image: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&q=80",
-  },
-  {
-    id: 7,
-    title: "Yolcu Uçağı",
-    emoji: "✈️",
-    category: "Havacılık",
-    pieces: "2,646",
-    buildTime: "20 saat",
-    difficulty: "Usta",
-    description: "Geri çekilebilir iniş takımları, açılır kapılar ve detaylı kokpit ile Boeing 747'den ilham alınan bu yolcu uçağı, Technic dişli sistemiyle çalışan motor kanatçıklarına sahiptir.",
-    color: "from-sky-600 to-indigo-900",
-    accent: "#6366F1",
-    fun_fact: "Kanatlar gerçekten eğim yapabiliyor (flap)!",
-    image: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=80",
-  },
-  {
-    id: 8,
-    title: "Askeri Helikopter",
-    emoji: "🚁",
-    category: "Havacılık",
-    pieces: "1,342",
-    buildTime: "10 saat",
-    difficulty: "Orta",
-    description: "Dönen ana rotor, kuyruk rotoru ve açılır kapı ile tam donanımlı askeri helikopter. Altında taşınabilir yük kancası ve arama feneri mekanizması bulunuyor.",
-    color: "from-lime-800 to-zinc-900",
-    accent: "#84CC16",
-    fun_fact: "Rotorlar gerçekten dönüyor — elle çevirince!",
-    image: "https://images.unsplash.com/photo-1608236465202-878897ddc84c?w=600&q=80",
-  },
-  {
-    id: 9,
+    id: "t1",
     title: "Spor Araba",
     emoji: "🏎️",
-    category: "Technic",
-    pieces: "1,580",
-    buildTime: "12 saat",
+    category: "LEGO Technic",
     difficulty: "Orta",
-    description: "8 silindirli boxer motor, çalışan süspansiyon sistemi ve gerçek direksiyon mekanizması ile donatılmış bu spor araba, Technic'in en ayrıntılı modellerinden biri.",
+    features: [
+      "Çalışan 8 silindirli motor pistonları",
+      "Gerçek süspansiyon sistemi",
+      "İşlevsel direksiyon mekanizması",
+      "Aerodinamik kaporta & spoiler",
+    ],
+    fun_fact: "Direksiyonu çevirince ön tekerlekler gerçekten yönleniyor!",
     color: "from-red-700 to-red-950",
     accent: "#EF4444",
-    fun_fact: "Direksiyonu çevirince ön tekerlekler dönüyor!",
     image: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=600&q=80",
   },
   {
-    id: 10,
-    title: "Çift Katlı Otobüs",
-    emoji: "🚌",
-    category: "Şehir",
-    pieces: "893",
-    buildTime: "7 saat",
-    difficulty: "Kolay",
-    description: "Londra'nın ikonik kırmızı çift katlı otobüsünden ilham alınan bu model; açılır arka kapı, detaylı iç mekan koltukları ve şoför kamarası ile tamamlanmış bir şehir klasiği.",
-    color: "from-red-600 to-red-900",
-    accent: "#DC2626",
-    fun_fact: "İçi tamamen döşenmiş — 12 yolcu koltuğu var!",
-    image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&q=80",
-  },
-  {
-    id: 11,
-    title: "Hidrolik Kepçe",
-    emoji: "🚜",
-    category: "İnşaat",
-    pieces: "1,124",
-    buildTime: "9 saat",
-    difficulty: "Orta",
-    description: "Tam hareketli hidrolik kol, 360° dönen kule ve gerçekçi paletli taban ile inşaat sahnesinin vazgeçilmezi kepçe. Technic dişli mekanizmasıyla kepçe kolu yukarı aşağı hareket eder.",
-    color: "from-amber-600 to-yellow-900",
-    accent: "#F59E0B",
-    fun_fact: "Kepçe kolu 6 farklı pozisyonda kilitlenebiliyor!",
-    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&q=80",
-  },
-  {
-    id: 12,
-    title: "Haul Kamyonu",
-    emoji: "🚛",
-    category: "İnşaat",
-    pieces: "2,038",
-    buildTime: "16 saat",
-    difficulty: "Usta",
-    description: "Devasa lastikleri, yükselen damper kasası ve detaylı V8 motoru ile bu haul kamyonu, maden ocağı sahnelerinin yıldızı. Powered UP motoruyla uzaktan kumanda edilebilir!",
-    color: "from-zinc-700 to-zinc-950",
-    accent: "#71717A",
-    fun_fact: "Gerçek boyutuna göre 1/24 ölçek!",
-    image: "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&q=80",
-  },
-  {
-    id: 13,
-    title: "Depo Forklifti",
+    id: "t2",
+    title: "Forklift",
     emoji: "🏗️",
-    category: "İnşaat",
-    pieces: "742",
-    buildTime: "5 saat",
+    category: "LEGO Technic",
     difficulty: "Kolay",
-    description: "Yükselen çatal mekanizması, dönen direksiyon ve gerçekçi ağırlık dengesi sistemi ile tam işlevsel forklift. Çatalları elle kaldırıp indirebilirsiniz.",
+    features: [
+      "Manuel olarak yükselen çatal mekanizması",
+      "Dönen arka tekerlek direksiyonu",
+      "Gerçekçi karşı ağırlık bloğu",
+      "Geniş stabilite tabanı",
+    ],
+    fun_fact: "Çatalları arka taraftaki dişliyi çevirerek kaldırabilirsiniz!",
     color: "from-orange-600 to-orange-950",
     accent: "#F97316",
-    fun_fact: "Çatallar 30 cm yüksekliğe kadar kalkabiliyor!",
     image: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&q=80",
   },
   {
-    id: 14,
-    title: "Turuncu Kedi",
-    emoji: "🐱",
-    category: "Hayvanlar",
-    pieces: "458",
-    buildTime: "3 saat",
-    difficulty: "Kolay",
-    description: "Yumuşak turuncu rengi, büyük yeşil gözleri ve kıvrık kuyruğuyla hazırlanmış bu sevimli LEGO kedisi, oyuncak değil — bir sanat eseri. Pati eklemleri birden fazla pozisyon alıyor.",
-    color: "from-orange-500 to-amber-700",
-    accent: "#FB923C",
-    fun_fact: "Her patisi ayrı ayrı 3 farklı açıya ayarlanabiliyor!",
-    image: "https://images.unsplash.com/photo-1518791841217-8f162f1912da?w=600&q=80",
+    id: "t3",
+    title: "Damperli Kamyon",
+    emoji: "🚛",
+    category: "LEGO Technic",
+    difficulty: "Orta",
+    features: [
+      "Kalkıp inen damper kasası",
+      "Mafsallı orta gövde direksiyon sistemi",
+      "Devasa çift aks arka tekerlekler",
+      "Ayrıntılı motor bölmesi",
+    ],
+    fun_fact: "Damper kasası mekanik bir kol yardımıyla kalkıp inebiliyor!",
+    color: "from-yellow-600 to-amber-900",
+    accent: "#F59E0B",
+    image: "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&q=80",
   },
   {
-    id: 15,
-    title: "Buharlı Tren",
-    emoji: "🚂",
-    category: "Tren",
-    pieces: "1,765",
-    buildTime: "13 saat",
+    id: "t4",
+    title: "Orman Makinesi",
+    emoji: "🌲",
+    category: "LEGO Technic",
+    difficulty: "Usta",
+    features: [
+      "360° dönen sürücü kabini",
+      "Hidrolik uzanan kıskac kolu",
+      "Devasa arazi tekerlekleri",
+      "Ayarlanabilir ağaç kesim bıçağı",
+    ],
+    fun_fact: "Kıskaç mekanizması 360 derece dönebilen bir dişli sistemine bağlıdır!",
+    color: "from-emerald-700 to-emerald-950",
+    accent: "#10B981",
+    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&q=80",
+  },
+  {
+    id: "t5",
+    title: "Jeep",
+    emoji: "🚙",
+    category: "LEGO Technic",
+    difficulty: "Kolay",
+    features: [
+      "Çalışan 4x4 tahrik sistemi",
+      "Bağımsız süspansiyon dört tekerlekte",
+      "Ön tampon üstü çekme halatı & vinç",
+      "Açılır kaput & motor detayı",
+    ],
+    fun_fact: "Ön tampondaki çekme halatı elle sarılabiliyor!",
+    color: "from-lime-700 to-zinc-900",
+    accent: "#84CC16",
+    image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&q=80",
+  },
+  {
+    id: "t6",
+    title: "SUV Araba",
+    emoji: "🚗",
+    category: "LEGO Technic",
     difficulty: "Orta",
-    description: "19. yüzyıldan fırlamış bir buharlı lokomotif: dönen çarklar, piston kolları ve gerçek buharlı kazan detaylarıyla tamamlanmış. Arkasında iki yolcu vagonu ve bir yük vagonu var.",
-    color: "from-zinc-800 to-red-950",
-    accent: "#B91C1C",
-    fun_fact: "3 vagonlu tam bir tren takımı!",
+    features: [
+      "Gerçekçi ön ve arka süspansiyon",
+      "Dört tekerlekten çekiş şanzımanı",
+      "Açılır kapılar & bagaj bölmesi",
+      "Çalışan direksiyon mekanizması",
+    ],
+    fun_fact: "Kaputu açıldığında pistonların yukarı-aşağı hareketi gözlemlenebilir!",
+    color: "from-blue-700 to-slate-900",
+    accent: "#3B82F6",
+    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&q=80",
+  },
+  {
+    id: "t7",
+    title: "Tekerlekli Yükleyici",
+    emoji: "🚜",
+    category: "LEGO Technic",
+    difficulty: "Usta",
+    features: [
+      "Mafsallı belden bükümlü şasi",
+      "Kalkıp inen büyük ön kepçe",
+      "Çalışan hidrolik silindir detayı",
+      "Devasa arka karşı ağırlık",
+    ],
+    fun_fact: "Hidrolik silindirler sayesinde kepçe tonlarca yükü taklit edebilir!",
+    color: "from-yellow-600 to-zinc-900",
+    accent: "#F59E0B",
+    image: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=600&q=80",
+  },
+  {
+    id: "t8",
+    title: "Buldozer",
+    emoji: "🚜",
+    category: "LEGO Technic",
+    difficulty: "Orta",
+    features: [
+      "Geniş paletli sürüş sistemi",
+      "Ayarlanabilir ön bıçak (blade)",
+      "Arka tırmık (ripper) mekanizması",
+      "Gerçek palet bağlantı sistemi",
+    ],
+    fun_fact: "Paletlerin üzerindeki küçük tekerlekler sürtünmeyi azaltarak hareketi kolaylaştırır!",
+    color: "from-yellow-600 to-yellow-950",
+    accent: "#F59E0B",
+    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&q=80",
+  },
+  {
+    id: "t9",
+    title: "Kar Ezme Aracı",
+    emoji: "❄️",
+    category: "LEGO Technic",
+    difficulty: "Kolay",
+    features: [
+      "Kauçuk paletli sürüş sistemi",
+      "Ayarlanabilir ön kar küreği",
+      "Dönen arka kar düzleştirici",
+      "Yüksek zemin boşluklu şasi",
+    ],
+    fun_fact: "Paletler kar üzerindeki gerçek sürüş hissini taklit etmek üzere tasarlanmıştır!",
+    color: "from-cyan-600 to-slate-800",
+    accent: "#0EA5E9",
+    image: "https://images.unsplash.com/photo-1482862549707-f63cb32c5fd9?w=600&q=80",
+  },
+  {
+    id: "t10",
+    title: "Motosiklet",
+    emoji: "🏍️",
+    category: "LEGO Technic",
+    difficulty: "Kolay",
+    features: [
+      "3 vitesli çalışan şanzıman",
+      "Mekanik zincir tahrik sistemi",
+      "Amortisörlü ön teleskopik maşa",
+      "Görünür motor bloğu",
+    ],
+    fun_fact: "Zincir, tekerlek döndükçe motor pistonlarına hareket iletir!",
+    color: "from-red-600 to-zinc-950",
+    accent: "#EF4444",
+    image: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&q=80",
+  },
+  {
+    id: "t11",
+    title: "Çöp Kamyonu",
+    emoji: "🗑️",
+    category: "LEGO Technic",
+    difficulty: "Orta",
+    features: [
+      "Yan taraftan konteyner kaldırma kolu",
+      "Arka çöp sıkıştırma mekanizması",
+      "Açılır arka kapı",
+      "Dişli tahrikli çalışan pres",
+    ],
+    fun_fact: "Çöp konteynerini kamyonun içine boşaltan kol tek bir dişliyle kontrol ediliyor!",
+    color: "from-green-600 to-zinc-900",
+    accent: "#10B981",
+    image: "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=600&q=80",
+  },
+  {
+    id: "t12",
+    title: "Mars Aracı",
+    emoji: "🪐",
+    category: "LEGO Technic",
+    difficulty: "Usta",
+    features: [
+      "6 tekerlekli rocker-bogie süspansiyon",
+      "Dönen araştırma kolu (arm)",
+      "Güneş paneli & anten dizisi",
+      "NASA Perseverance'a dayalı tasarım",
+    ],
+    fun_fact: "NASA'nın Perseverance uzay aracının gerçeğe uygun mekanik kopyasıdır!",
+    color: "from-orange-700 to-rose-950",
+    accent: "#F97316",
+    image: "https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=600&q=80",
+  },
+  {
+    id: "t13",
+    title: "Paletli Vinç",
+    emoji: "🏗️",
+    category: "LEGO Technic",
+    difficulty: "Usta",
+    features: [
+      "1.2 m uzayan kafes bom",
+      "Çift halatlı çalışan vinç tamburları",
+      "360° dönen üst gövde",
+      "Kilitlenebilir destek ayakları",
+    ],
+    fun_fact: "1.2 metreye kadar uzayabilen bomu ile en yüksek Technic modellerinden biridir!",
+    color: "from-yellow-500 to-neutral-900",
+    accent: "#F59E0B",
+    image: "https://images.unsplash.com/photo-1542401886-65d6c61db217?w=600&q=80",
+  },
+  {
+    id: "t14",
+    title: "Malzeme Elleçleyici",
+    emoji: "🏗️",
+    category: "LEGO Technic",
+    difficulty: "Orta",
+    features: [
+      "Yükselen operatör kabini",
+      "Döner hidrolik kıskaç",
+      "Açılır stabilizatör ayakları",
+      "Uzayan teleskopik kol",
+    ],
+    fun_fact: "Operatör kabini, dikey bir piston mekanizmasıyla yukarı doğru yükselmektedir!",
+    color: "from-blue-600 to-slate-900",
+    accent: "#3B82F6",
+    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&q=80",
+  },
+  {
+    id: "t15",
+    title: "Havaalanı Kurtarma Aracı",
+    emoji: "🚒",
+    category: "LEGO Technic",
+    difficulty: "Orta",
+    features: [
+      "Çift dingilli 4 tekerlekten yönlendirme",
+      "Teleskopik su bom mekanizması",
+      "180° dönen su püskürtme nozulu",
+      "Çalışan 4 silindirli motor",
+    ],
+    fun_fact: "Teleskopik bom üzerindeki su püskürtme ucu 180 derece dönebilir!",
+    color: "from-red-600 to-stone-900",
+    accent: "#EF4444",
+    image: "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=600&q=80",
+  },
+  {
+    id: "t16",
+    title: "Traktör",
+    emoji: "🚜",
+    category: "LEGO Technic",
+    difficulty: "Kolay",
+    features: [
+      "Çalışan arka kuyruk mili (PTO)",
+      "Bağlanabilir arka aparat (pulluk/biçer)",
+      "Döner ön direksiyon sistemi",
+      "Büyük çaplı tarla tekerlekleri",
+    ],
+    fun_fact: "Traktör hareket ettikçe pulluk diskleri de bağlı dişliler sayesinde döner!",
+    color: "from-green-600 to-amber-950",
+    accent: "#10B981",
+    image: "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=600&q=80",
+  },
+  {
+    id: "t17",
+    title: "Maden Kepçesi",
+    emoji: "⛏️",
+    category: "LEGO Technic",
+    difficulty: "Usta",
+    features: [
+      "Dev ön yükleme kepçesi",
+      "Mafsallı gövde yönlendirme",
+      "Karşı ağırlıklı arka bölme",
+      "Gerçekçi büyük dişli çark sistemi",
+    ],
+    fun_fact: "Devasa ağırlığı dengelemek için gövdenin arkasında metal karşı ağırlıklar bulunur!",
+    color: "from-yellow-600 to-stone-910",
+    accent: "#F59E0B",
+    image: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&q=80",
+  },
+  {
+    id: "t18",
+    title: "Arazi Aracı",
+    emoji: "🏎️",
+    category: "LEGO Technic",
+    difficulty: "Orta",
+    features: [
+      "Büyük kauçuk arazi lastikleri",
+      "Bağımsız dört amortisör sistemi",
+      "Çalışan ön vinç mekanizması",
+      "Koruyucu takla kafesi",
+    ],
+    fun_fact: "Araç havaya atıldığında süspansiyonlar darbeyi tamamen emebilecek kapasitededir!",
+    color: "from-lime-600 to-neutral-900",
+    accent: "#84CC16",
+    image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&q=80",
+  },
+];
+
+const CITY_BUILDS = [
+  {
+    id: "c1",
+    title: "Kamyon",
+    emoji: "🚚",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Açılır arka kargo kapısı",
+      "Takılıp çıkarılabilir kargo paketleri",
+      "El arabası aksesuarı",
+      "Detaylı sürücü kamarası",
+    ],
+    fun_fact: "Kamyonun kasasında kargoları kilitleyen küçük bölmeler vardır!",
+    color: "from-blue-500 to-blue-700",
+    accent: "#3B82F6",
+    image: "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&q=80",
+  },
+  {
+    id: "c2",
+    title: "Traktör",
+    emoji: "🚜",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Büyük çaplı arka çiftlik tekerlekleri",
+      "Saman balyası & hasat aksesuarları",
+      "Çiftçi minifigürü dahil",
+      "Açık kabin sürüş yeri",
+    ],
+    fun_fact: "Sete lezzetli görünen iki adet LEGO balkabağı dahildir!",
+    color: "from-green-500 to-green-700",
+    accent: "#10B981",
+    image: "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=600&q=80",
+  },
+  {
+    id: "c3",
+    title: "Villa",
+    emoji: "🏡",
+    category: "LEGO City",
+    difficulty: "Orta",
+    features: [
+      "Güneş panelli modern çatı",
+      "Elektrikli araç şarj istasyonu",
+      "Açılır katlar & döşenmiş odalar",
+      "Bahçe & yüzme havuzu alanı",
+    ],
+    fun_fact: "Villanın bahçesinde sevimli bir LEGO golden retriever köpeği yaşar!",
+    color: "from-emerald-500 to-teal-700",
+    accent: "#10B981",
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=600&q=80",
+  },
+  {
+    id: "c4",
+    title: "Havuz",
+    emoji: "🏊",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Çalışan plastik kaydırak",
+      "Güneş şemsiyesi & şezlonglar",
+      "Dondurma standı aksesuarı",
+      "Can simidi & kurtarma kulesi",
+    ],
+    fun_fact: "Tramplenden atlama tahtası esnek plastik parçadan yapılmıştır!",
+    color: "from-sky-400 to-blue-600",
+    accent: "#0EA5E9",
+    image: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=600&q=80",
+  },
+  {
+    id: "c5",
+    title: "İtfaiye Kamyonu",
+    emoji: "🚒",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Uzatılabilir & dönen yangın merdiveni",
+      "Su hortumu & basınçlı tabanca",
+      "Işıklı siren aksesuarı",
+      "İtfaiyeci minifigürleri dahil",
+    ],
+    fun_fact: "Merdiven kendi ekseni etrafında 360 derece dönebilir ve 25 cm uzayabilir!",
+    color: "from-red-500 to-red-700",
+    accent: "#EF4444",
+    image: "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=600&q=80",
+  },
+  {
+    id: "c6",
+    title: "Kamyonet",
+    emoji: "🛻",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Aşağı açılan arka kapak",
+      "Tavan macera ekipman taşıyıcısı",
+      "Sörf tahtası & kamp ekipmanı",
+      "Çekme kancası (tow hitch)",
+    ],
+    fun_fact: "Arka kapağı tamamen aşağıya doğru açılabilen mekanizmaya sahiptir!",
+    color: "from-orange-500 to-amber-600",
+    accent: "#F97316",
+    image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&q=80",
+  },
+  {
+    id: "c7",
+    title: "Taksi",
+    emoji: "🚕",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Klasik sarı taksi rengi",
+      "Tavan reklam ve ışık tabelası",
+      "Bagaj taşıma raf aksesuarı",
+      "Taksi şoförü minifigürü",
+    ],
+    fun_fact: "Sürücü minifigürünün elinde bir adet kahve bardağı bulunur!",
+    color: "from-yellow-400 to-amber-500",
+    accent: "#F59E0B",
+    image: "https://images.unsplash.com/photo-1492664738948-2ec93a5c0942?w=600&q=80",
+  },
+  {
+    id: "c8",
+    title: "Sahil Güvenlik Aracı",
+    emoji: "🛥️",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Su üzerinde yüzebilen kurtarma botu",
+      "Römorklu sahil jipi",
+      "Can yelekleri & şamandıra",
+      "Sahil güvenlik minifigürleri",
+    ],
+    fun_fact: "Sahil güvenlik botu su üzerinde gerçekten yüzebilmektedir!",
+    color: "from-sky-500 to-indigo-700",
+    accent: "#3B82F6",
+    image: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&q=80",
+  },
+  {
+    id: "c9",
+    title: "Süper Araba",
+    emoji: "🏎️",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Değiştirilebilir jant kapakları",
+      "Büyük arka rüzgarlık (spoiler)",
+      "Alçak gövde & spor süspansiyon",
+      "2 kapılı yarış koltuğu kamarası",
+    ],
+    fun_fact: "Jant kapakları isteğe göre değiştirilebilir iki farklı tasarımla gelir!",
+    color: "from-violet-500 to-purple-800",
+    accent: "#8B5CF6",
+    image: "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=600&q=80",
+  },
+  {
+    id: "c10",
+    title: "Tren İstasyonu",
+    emoji: "🚉",
+    category: "LEGO City",
+    difficulty: "Orta",
+    features: [
+      "Detaylı bilet gişesi & bekleme salonu",
+      "Kahve dükkanı & satış standı",
+      "Yolcu peronları & ray geçiş köprüsü",
+      "Kalkış/varış tabelası çıkartmaları",
+    ],
+    fun_fact: "İstasyon panosunda LEGO City tren saatlerini gösteren detaylı çıkartmalar vardır!",
+    color: "from-slate-500 to-slate-800",
+    accent: "#6B7280",
     image: "https://images.unsplash.com/photo-1474487548417-781cb6d646d8?w=600&q=80",
   },
   {
-    id: 16,
-    title: "Konteyner Gemisi",
-    emoji: "🚢",
-    category: "Deniz",
-    pieces: "3,210",
-    buildTime: "26 saat",
-    difficulty: "Usta",
-    description: "Yüzlerce renkli konteyner, çalışan vinç mekanizması ve detaylı kaptan köprüsü ile bu dev konteyner gemisi, Technic'in en büyük deniz yapılarından biri. Su üzerinde yüzüyor!",
-    color: "from-teal-700 to-cyan-950",
-    accent: "#0D9488",
-    fun_fact: "Gerçekten suya atınca batmıyor — test edildi! 🌊",
-    image: "https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=600&q=80",
+    id: "c11",
+    title: "Dağ Bisikleti",
+    emoji: "🚲",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Kalın dişli arazi lastikleri",
+      "Bisiklet kaskı & koruyucu diz kapağı",
+      "Kamp ateşi & çadır aksesuarı",
+      "Minifigür ile uyumlu kavrama tutacakları",
+    ],
+    fun_fact: "Bisiklet iskeleti minifigürlerin elleriyle tam kavrayabileceği ölçüdedir!",
+    color: "from-lime-500 to-emerald-700",
+    accent: "#84CC16",
+    image: "https://images.unsplash.com/photo-1482862549707-f63cb32c5fd9?w=600&q=80",
+  },
+  {
+    id: "c12",
+    title: "Minibüs",
+    emoji: "🚐",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Sürgülü yan kapı",
+      "Tavan bagaj & ekipman taşıyıcısı",
+      "Minyatür lavabo & kahve makinesi",
+      "Katlanabilir arka koltuklar",
+    ],
+    fun_fact: "İçerisinde küçük bir lavabo ve minyatür kahve makinesi mevcuttur!",
+    color: "from-yellow-500 to-orange-600",
+    accent: "#F59E0B",
+    image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&q=80",
+  },
+  {
+    id: "c13",
+    title: "Araç Yıkama",
+    emoji: "🧼",
+    category: "LEGO City",
+    difficulty: "Kolay",
+    features: [
+      "Dönen köpük fırçaları",
+      "Kurutma fanı mekanizması",
+      "Su püskürtme nozulları",
+      "Araç içinden geçiş rampa sistemi",
+    ],
+    fun_fact: "Fırçalar, araç içinden geçtikçe tekerleklerin sürtünmesiyle otomatik olarak döner!",
+    color: "from-blue-400 to-indigo-600",
+    accent: "#3B82F6",
+    image: "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&q=80",
+  },
+  {
+    id: "c14",
+    title: "F1 Garajı",
+    emoji: "🏎️",
+    category: "LEGO City",
+    difficulty: "Orta",
+    features: [
+      "Pit stop krikosu & lastik değişim seti",
+      "Bilgisayar ekranları & strateji masası",
+      "Takım pit ekibi minifigürleri",
+      "Yarış arabasını havaya kaldırma krikosu",
+    ],
+    fun_fact: "Pit stop krikosu yardımıyla yarış arabasını gerçekten havaya kaldırabilirsiniz!",
+    color: "from-red-500 to-stone-800",
+    accent: "#EF4444",
+    image: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=600&q=80",
   },
 ];
 
@@ -242,24 +565,33 @@ type SurpriseBoxProps = {
 };
 
 export default function SurpriseBox({ onClose }: SurpriseBoxProps) {
-  const [phase, setPhase] = useState<"idle" | "shaking" | "opening" | "revealed">("idle");
-  const [currentBuild, setCurrentBuild] = useState(SURPRISE_BUILDS[0]);
+  const [phase, setPhase] = useState<"select-category" | "idle" | "shaking" | "opening" | "revealed">("select-category");
+  const [selectedCategory, setSelectedCategory] = useState<"Technic" | "City" | null>(null);
+  const [currentBuild, setCurrentBuild] = useState<any>(null);
   const [spinCount, setSpinCount] = useState(0);
 
+  const handleSelectCategory = (category: "Technic" | "City") => {
+    setSelectedCategory(category);
+    setPhase("idle");
+  };
+
   const handleOpenBox = () => {
-    if (phase === "shaking" || phase === "opening") return;
+    if (phase === "shaking" || phase === "opening" || !selectedCategory) return;
     setPhase("shaking");
 
     setTimeout(() => {
       setPhase("opening");
-      const random = SURPRISE_BUILDS[Math.floor(Math.random() * SURPRISE_BUILDS.length)];
+      const list = selectedCategory === "Technic" ? TECHNIC_BUILDS : CITY_BUILDS;
+      const random = list[Math.floor(Math.random() * list.length)];
       setCurrentBuild(random);
       setTimeout(() => setPhase("revealed"), 600);
     }, 1200);
   };
 
   const handleTryAgain = () => {
-    setPhase("idle");
+    setPhase("select-category");
+    setSelectedCategory(null);
+    setCurrentBuild(null);
     setSpinCount((c) => c + 1);
   };
 
@@ -270,41 +602,117 @@ export default function SurpriseBox({ onClose }: SurpriseBoxProps) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ type: "spring", stiffness: 200, damping: 22 }}
-        className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[95vh] flex flex-col"
+        className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[95vh] flex flex-col border border-zinc-200 dark:border-zinc-800"
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur flex items-center justify-center hover:bg-white dark:hover:bg-zinc-700 transition-colors shadow"
+          className="absolute top-5 right-5 z-20 w-10 h-10 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur flex items-center justify-center hover:bg-white dark:hover:bg-zinc-700 transition-colors shadow border border-zinc-200/50 dark:border-zinc-700/50"
         >
           <X size={20} />
         </button>
 
         {/* Header */}
         <div className="px-8 pt-8 pb-4 text-center flex-shrink-0">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Sürpriz</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-1">Sürpriz Kutu</p>
           <h2 className="text-3xl font-black tracking-tight">🎁 Kutu Aç!</h2>
-          <p className="text-sm text-zinc-500 mt-1">Her açılışta farklı bir LEGO yapısı seni bekliyor</p>
+          <p className="text-sm text-zinc-500 mt-1">
+            {phase === "select-category"
+              ? "Başlamak için bir LEGO kategorisi seçin"
+              : "Şansına ne çıkacağını görmek için kutuyu aç!"}
+          </p>
         </div>
 
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto flex-1 pb-6">
           <AnimatePresence mode="wait">
-            {phase !== "revealed" ? (
+            {phase === "select-category" ? (
+              /* Category Selection Phase */
+              <motion.div
+                key="select-category-phase"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="flex flex-col gap-4 px-8 py-4"
+              >
+                {/* Technic Card */}
+                <motion.div
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSelectCategory("Technic")}
+                  className="relative group overflow-hidden rounded-[2rem] p-6 bg-gradient-to-br from-zinc-800 to-zinc-950 text-white border border-zinc-700 hover:border-zinc-500 shadow-lg cursor-pointer transition-all duration-300"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl group-hover:bg-red-500/20 transition-colors duration-300" />
+                  <div className="flex items-start gap-4">
+                    <span className="text-5xl select-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300">⚙️</span>
+                    <div>
+                      <h3 className="text-xl font-black tracking-tight flex items-center gap-1.5">
+                        LEGO Technic
+                        <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                      </h3>
+                      <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mt-0.5">Mühendislik & Mekanik</p>
+                      <p className="text-xs text-zinc-300 mt-3 leading-relaxed">
+                        Çalışan motor pistonları, gelişmiş vites kutuları, süspansiyon sistemleri ve karmaşık iş makineleriyle dolu dünyayı keşfet.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* City Card */}
+                <motion.div
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSelectCategory("City")}
+                  className="relative group overflow-hidden rounded-[2rem] p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-zinc-900 dark:to-blue-950/20 text-zinc-900 dark:text-white border border-blue-200 dark:border-blue-950/50 hover:border-blue-400 dark:hover:border-blue-900 shadow-lg cursor-pointer transition-all duration-300"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-colors duration-300" />
+                  <div className="flex items-start gap-4">
+                    <span className="text-5xl select-none filter drop-shadow-md group-hover:scale-110 transition-transform duration-300">🏙️</span>
+                    <div>
+                      <h3 className="text-xl font-black tracking-tight flex items-center gap-1.5">
+                        LEGO City
+                        <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                      </h3>
+                      <p className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest mt-0.5">Şehir Hayatı & Macera</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-300 mt-3 leading-relaxed">
+                        İtfaiye istasyonları, süper arabalar, taksiler, trenler, lüks villalar ve şehir sokaklarındaki macera dolu günlük yaşamı tasarla.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            ) : phase !== "revealed" ? (
               /* Box Phase */
               <motion.div
                 key="box-phase"
                 exit={{ opacity: 0, scale: 0.5 }}
                 className="flex flex-col items-center px-8 py-6"
               >
+                {/* Selected Category Label */}
+                <div className="mb-4">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                      selectedCategory === "Technic"
+                        ? "bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400"
+                        : "bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                    }`}
+                  >
+                    {selectedCategory === "Technic" ? "⚙️ LEGO Technic Seçildi" : "🏙️ LEGO City Seçildi"}
+                  </span>
+                </div>
+
                 {/* The Box */}
                 <div className="relative flex items-center justify-center mb-8 select-none">
-                  {/* Glow effect */}
                   <motion.div
-                    animate={phase === "shaking" ? { scale: [1, 1.3, 1, 1.4, 1], opacity: [0.4, 0.8, 0.4, 0.9, 0.4] } : { opacity: 0.2 }}
+                    animate={
+                      phase === "shaking"
+                        ? { scale: [1, 1.3, 1, 1.4, 1], opacity: [0.4, 0.8, 0.4, 0.9, 0.4] }
+                        : { opacity: 0.2 }
+                    }
                     transition={{ duration: 1, repeat: phase === "shaking" ? Infinity : 0 }}
-                    className="absolute w-48 h-48 rounded-full bg-lego-yellow/40 blur-3xl"
+                    className={`absolute w-48 h-48 rounded-full blur-3xl ${
+                      selectedCategory === "Technic" ? "bg-red-500/40" : "bg-blue-500/40"
+                    }`}
                   />
-
                   <motion.div
                     key={spinCount}
                     animate={
@@ -325,7 +733,6 @@ export default function SurpriseBox({ onClose }: SurpriseBoxProps) {
                     <span style={{ fontSize: "8rem", lineHeight: 1, display: "block" }}>🎁</span>
                   </motion.div>
 
-                  {/* Sparkles during shaking */}
                   {phase === "shaking" && (
                     <>
                       {["✨", "⭐", "💫", "🌟"].map((star, i) => (
@@ -352,18 +759,26 @@ export default function SurpriseBox({ onClose }: SurpriseBoxProps) {
                 <motion.button
                   onClick={handleOpenBox}
                   disabled={phase === "shaking" || phase === "opening"}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full py-5 bg-gradient-to-r from-lego-red to-red-600 text-white font-black text-xl rounded-2xl shadow-xl shadow-lego-red/30 disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`w-full py-5 text-white font-black text-xl rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3 ${
+                    selectedCategory === "Technic"
+                      ? "bg-gradient-to-r from-red-600 to-red-800 shadow-red-500/20"
+                      : "bg-gradient-to-r from-blue-600 to-blue-800 shadow-blue-500/20"
+                  }`}
                 >
                   {phase === "idle" && <><span>🎁</span> KUTUYU AÇ!</>}
                   {phase === "shaking" && <><span className="animate-bounce">⏳</span> Açılıyor...</>}
                   {phase === "opening" && <><span>🎊</span> Sürpriz!</>}
                 </motion.button>
 
-                <p className="text-xs text-zinc-400 mt-4 font-medium">
-                  {SURPRISE_BUILDS.length} farklı yapıdan biri seni bekliyor 🧱
-                </p>
+                <button
+                  onClick={handleTryAgain}
+                  disabled={phase === "shaking" || phase === "opening"}
+                  className="w-full mt-3 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 font-bold rounded-xl transition-all text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  ⬅️ Kategori Değiştir
+                </button>
               </motion.div>
             ) : (
               /* Revealed Phase */
@@ -384,10 +799,7 @@ export default function SurpriseBox({ onClose }: SurpriseBoxProps) {
                     alt={currentBuild.title}
                     className="w-full h-full object-cover"
                   />
-                  {/* Gradient overlay */}
                   <div className={`absolute inset-0 bg-gradient-to-t ${currentBuild.color} opacity-60`} />
-
-                  {/* Emoji + title over photo */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
                     <motion.span
                       initial={{ scale: 0 }}
@@ -410,21 +822,6 @@ export default function SurpriseBox({ onClose }: SurpriseBoxProps) {
                       <p className="text-white/80 text-xs font-bold tracking-widest uppercase mt-0.5">{currentBuild.category}</p>
                     </motion.div>
                   </div>
-
-                  {/* Stats bar */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="absolute bottom-3 left-0 right-0 flex justify-center gap-3 z-10"
-                  >
-                    <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-xs font-bold">
-                      <Cuboid size={12} /> {currentBuild.pieces} parça
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-xs font-bold">
-                      <Clock size={12} /> {currentBuild.buildTime}
-                    </div>
-                  </motion.div>
                 </div>
 
                 {/* Details */}
@@ -434,22 +831,38 @@ export default function SurpriseBox({ onClose }: SurpriseBoxProps) {
                   transition={{ delay: 0.35 }}
                   className="px-7 py-5"
                 >
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed mb-4">
-                    {currentBuild.description}
-                  </p>
+                  {/* Feature List */}
+                  <div className="mb-5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">🔩 Özellikler</p>
+                    <ul className="flex flex-col gap-2">
+                      {currentBuild.features.map((feat: string, i: number) => (
+                        <motion.li
+                          key={i}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4 + i * 0.08 }}
+                          className="flex items-center gap-2.5 text-sm text-zinc-700 dark:text-zinc-300 font-medium"
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: currentBuild.accent }}
+                          />
+                          {feat}
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </div>
 
                   {/* Fun fact */}
                   <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3 mb-5">
                     <span className="text-xl flex-shrink-0">💡</span>
-                    <p className="text-sm font-bold text-amber-700 dark:text-amber-300">
-                      {currentBuild.fun_fact}
-                    </p>
+                    <p className="text-sm font-bold text-amber-700 dark:text-amber-300">{currentBuild.fun_fact}</p>
                   </div>
 
                   <div className="flex gap-3">
                     <button
                       onClick={handleTryAgain}
-                      className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 font-black rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                      className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 font-black rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"
                     >
                       <RefreshCw size={16} /> Tekrar Dene
                     </button>
@@ -457,7 +870,7 @@ export default function SurpriseBox({ onClose }: SurpriseBoxProps) {
                       onClick={onClose}
                       className="flex-1 py-3 bg-foreground text-background font-black rounded-2xl hover:opacity-80 transition-opacity flex items-center justify-center gap-2 text-sm"
                     >
-                      <ExternalLink size={16} /> Galeriyi Gör
+                      <ExternalLink size={16} /> Kapat
                     </button>
                   </div>
                 </motion.div>
