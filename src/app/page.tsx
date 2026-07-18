@@ -747,32 +747,22 @@ export default function Home() {
 
 
       {/* LEGO Designer Section */}
-      <section id="designer" className="py-0 bg-white dark:bg-zinc-950">
-        <div className="max-w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center py-16 px-6"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lego-yellow/10 border border-lego-yellow/30 text-sm font-bold text-amber-700 dark:text-lego-yellow mb-6">
-              🧱 YENİ ÖZELLİK
-            </div>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-4">
-              LEGO{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-lego-yellow via-lego-red to-lego-blue">
-                Tasarımcı
-              </span>
-            </h2>
-            <p className="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
-              Gerçek LEGO zemin üzerinde kendi kreasyonunu tasarla! City, Classic, Creator, Technic ve Doğa parçaları arasından seç, rengini belirle ve inşa et.
-            </p>
-          </motion.div>
-          <div className="border-t border-zinc-200 dark:border-zinc-800">
-            <LegoDesigner />
+      <section id="designer" className="bg-zinc-900">
+        <div className="px-6 pt-16 pb-8 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lego-yellow/20 border border-lego-yellow/40 text-sm font-bold text-lego-yellow mb-6">
+            🧱 YENİ ÖZELLİK
           </div>
+          <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-4 text-white">
+            LEGO{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lego-yellow via-lego-red to-lego-blue">
+              Tasarımcı
+            </span>
+          </h2>
+          <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+            Tinkercad gibi — sol panelden parça seç, zemine yerleştir, boyutunu ayarla, rengini değiştir.
+          </p>
         </div>
+        <LegoDesigner />
       </section>
 
       {/* Mini Games & Social Section */}

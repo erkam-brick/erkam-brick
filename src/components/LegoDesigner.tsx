@@ -1,703 +1,583 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Search, Trash2, RotateCw, Save, ChevronDown, X, ZoomIn, ZoomOut,
-  Layers, Palette, Package, Trees, Wrench, Star, Grid3X3
+  Trash2, RotateCw, Save, ZoomIn, ZoomOut, Minus, Plus,
+  Move, MousePointer
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type LegoPart = {
+/* ──────────────────────────────────────────────
+   PART TYPES  – her tip sadece 1 tane
+   Kullanıcı boyutu sonradan ayarlar
+────────────────────────────────────────────── */
+type PartDef = {
   id: string;
   name: string;
-  category: "City" | "Classic" | "Creator" | "Technic" | "Doğa";
-  w: number; // grid columns
-  h: number; // grid rows
-  shape: "rect" | "round" | "slope" | "slope-inv" | "arch" | "leaf" | "tree" | "gear" | "pin" | "beam" | "wedge";
   icon: string;
-  defaultColor: string;
-  studPattern?: "full" | "edge" | "none"; // stud rendering hint
+  category: string;
+  defaultW: number;  // stud cinsinden genişlik
+  defaultH: number;  // stud cinsinden yükseklik (derinlik, üstten bakış)
+  minW: number; maxW: number;
+  minH: number; maxH: number;
+  shape: "brick" | "plate" | "tile" | "slope" | "beam" | "gear" | "cylinder" | "cone" | "window" | "door" | "tree" | "leaf" | "rock" | "grass" | "arch" | "wedge";
+  color: string;
 };
 
-type PlacedBrick = {
+const PART_DEFS: PartDef[] = [
+  // ── Tuğla & Plaka ──
+  { id: "brick",    name: "Tuğla",         icon: "🧱", category: "Temel",   defaultW: 2, defaultH: 2, minW:1, maxW:16, minH:1, maxH:16, shape:"brick",    color:"#CC0000" },
+  { id: "plate",    name: "Plaka",          icon: "▬",  category: "Temel",   defaultW: 2, defaultH: 2, minW:1, maxW:16, minH:1, maxH:16, shape:"plate",    color:"#006CB7" },
+  { id: "tile",     name: "Karo (Düz)",     icon: "◻",  category: "Temel",   defaultW: 2, defaultH: 2, minW:1, maxW:16, minH:1, maxH:16, shape:"tile",     color:"#F5CD2F" },
+  { id: "slope",    name: "Eğim",           icon: "◤",  category: "Temel",   defaultW: 2, defaultH: 2, minW:1, maxW:8,  minH:1, maxH:8,  shape:"slope",    color:"#595D60" },
+  { id: "wedge",    name: "Kama",           icon: "◢",  category: "Temel",   defaultW: 2, defaultH: 2, minW:1, maxW:8,  minH:1, maxH:8,  shape:"wedge",    color:"#AFB5C7" },
+  // ── Yuvarlak ──
+  { id: "cylinder", name: "Silindir",       icon: "⬤",  category: "Yuvarlak",defaultW: 2, defaultH: 2, minW:1, maxW:8,  minH:1, maxH:8,  shape:"cylinder", color:"#9C4DC1" },
+  { id: "cone",     name: "Koni",           icon: "▲",  category: "Yuvarlak",defaultW: 2, defaultH: 2, minW:1, maxW:8,  minH:1, maxH:8,  shape:"cone",     color:"#CC0000" },
+  // ── Yapı Elemanları ──
+  { id: "arch",     name: "Kemer",          icon: "🌉", category: "Yapı",    defaultW: 4, defaultH: 2, minW:2, maxW:12, minH:2, maxH:8,  shape:"arch",     color:"#F2E4BC" },
+  { id: "window",   name: "Pencere",        icon: "🪟", category: "Yapı",    defaultW: 2, defaultH: 3, minW:2, maxW:6,  minH:2, maxH:6,  shape:"window",   color:"#73C9E7" },
+  { id: "door",     name: "Kapı",           icon: "🚪", category: "Yapı",    defaultW: 2, defaultH: 4, minW:2, maxW:4,  minH:3, maxH:6,  shape:"door",     color:"#AA7D55" },
+  // ── Technic ──
+  { id: "beam",     name: "Kiriş",          icon: "━",  category: "Technic", defaultW: 5, defaultH: 1, minW:1, maxW:20, minH:1, maxH:3,  shape:"beam",     color:"#595D60" },
+  { id: "gear",     name: "Dişli",          icon: "⚙️", category: "Technic", defaultW: 4, defaultH: 4, minW:2, maxW:10, minH:2, maxH:10, shape:"gear",     color:"#595D60" },
+  // ── Doğa ──
+  { id: "tree",     name: "Ağaç Gövdesi",  icon: "🪵", category: "Doğa",   defaultW: 1, defaultH: 1, minW:1, maxW:4,  minH:1, maxH:4,  shape:"tree",     color:"#5F3109" },
+  { id: "leaf",     name: "Yaprak",         icon: "🌿", category: "Doğa",   defaultW: 4, defaultH: 4, minW:2, maxW:8,  minH:2, maxH:8,  shape:"leaf",     color:"#237841" },
+  { id: "rock",     name: "Kaya",           icon: "🪨", category: "Doğa",   defaultW: 2, defaultH: 2, minW:1, maxW:6,  minH:1, maxH:6,  shape:"rock",     color:"#AFB5C7" },
+  { id: "grass",    name: "Çim Plakası",    icon: "🌱", category: "Doğa",   defaultW: 4, defaultH: 4, minW:2, maxW:16, minH:2, maxH:16, shape:"grass",    color:"#4DBB3A" },
+];
+
+const CATEGORIES = ["Temel", "Yuvarlak", "Yapı", "Technic", "Doğa"];
+
+/* ── Renkler ── */
+const LEGO_COLORS = [
+  "#CC0000","#006CB7","#F5CD2F","#237841","#4DBB3A",
+  "#FE8A18","#9C4DC1","#FC97AC","#73C9E7","#0099CD",
+  "#595D60","#AFB5C7","#FFFFFF","#1A1A1A","#5F3109",
+  "#AA7D55","#F2E4BC","#8B0000","#D4AF37","#A8A9AD",
+  "#A5CA18","#008E9B",
+];
+
+/* ── Placed brick ── */
+type Brick = {
   uid: string;
   partId: string;
-  x: number; // grid column (0-indexed)
-  y: number; // grid row (0-indexed)
-  layer: number; // Z layer
+  x: number; y: number;   // grid position (stud units)
+  w: number; h: number;   // stud units
   color: string;
-  rotation: number; // 0 | 90 | 180 | 270
+  rotation: number;       // 0 | 90 | 180 | 270
+  layer: number;
 };
 
-// ─── LEGO Color Palette ────────────────────────────────────────────────────────
-const LEGO_COLORS: { name: string; hex: string }[] = [
-  { name: "Kırmızı", hex: "#CC0000" },
-  { name: "Mavi", hex: "#006CB7" },
-  { name: "Sarı", hex: "#F5CD2F" },
-  { name: "Yeşil", hex: "#237841" },
-  { name: "Açık Yeşil", hex: "#4DBB3A" },
-  { name: "Turuncu", hex: "#FE8A18" },
-  { name: "Mor", hex: "#9C4DC1" },
-  { name: "Pembe", hex: "#FC97AC" },
-  { name: "Açık Mavi", hex: "#9FC3E0" },
-  { name: "Gök Mavisi", hex: "#0099CD" },
-  { name: "Koyu Gri", hex: "#595D60" },
-  { name: "Açık Gri", hex: "#AFB5C7" },
-  { name: "Beyaz", hex: "#FFFFFF" },
-  { name: "Siyah", hex: "#1A1A1A" },
-  { name: "Kahverengi", hex: "#5F3109" },
-  { name: "Açık Kahve", hex: "#AA7D55" },
-  { name: "Krem", hex: "#F2E4BC" },
-  { name: "Koyu Kırmızı", hex: "#8B0000" },
-  { name: "Altın", hex: "#D4AF37" },
-  { name: "Gümüş", hex: "#A8A9AD" },
-  { name: "Şeffaf Mavi", hex: "#73C9E7" },
-  { name: "Şeffaf Kırmızı", hex: "#F9695A" },
-  { name: "Lime", hex: "#A5CA18" },
-  { name: "Teal", hex: "#008E9B" },
-];
+/* ── Config ── */
+const CELL = 28;          // px per stud
+const GRID_W = 48;
+const GRID_H = 48;
 
-// ─── Part Library ─────────────────────────────────────────────────────────────
-const PARTS: LegoPart[] = [
-  // ── City / Classic ──
-  { id: "brick-1x1", name: "1×1 Tuğla", category: "Classic", w: 1, h: 1, shape: "rect", icon: "🧱", defaultColor: "#CC0000" },
-  { id: "brick-1x2", name: "1×2 Tuğla", category: "Classic", w: 2, h: 1, shape: "rect", icon: "🧱", defaultColor: "#CC0000" },
-  { id: "brick-2x2", name: "2×2 Tuğla", category: "Classic", w: 2, h: 2, shape: "rect", icon: "🧱", defaultColor: "#CC0000" },
-  { id: "brick-2x4", name: "2×4 Tuğla", category: "Classic", w: 4, h: 2, shape: "rect", icon: "🧱", defaultColor: "#0055BF" },
-  { id: "brick-1x4", name: "1×4 Tuğla", category: "Classic", w: 4, h: 1, shape: "rect", icon: "🧱", defaultColor: "#0055BF" },
-  { id: "brick-1x6", name: "1×6 Tuğla", category: "Classic", w: 6, h: 1, shape: "rect", icon: "🧱", defaultColor: "#237841" },
-  { id: "brick-1x8", name: "1×8 Tuğla", category: "Classic", w: 8, h: 1, shape: "rect", icon: "🧱", defaultColor: "#237841" },
-  { id: "brick-2x6", name: "2×6 Tuğla", category: "Classic", w: 6, h: 2, shape: "rect", icon: "🧱", defaultColor: "#F5CD2F" },
-  { id: "brick-4x4", name: "4×4 Tuğla", category: "Classic", w: 4, h: 4, shape: "rect", icon: "🧱", defaultColor: "#9C4DC1" },
-  { id: "plate-1x1", name: "1×1 Plaka", category: "Classic", w: 1, h: 1, shape: "rect", icon: "▬", defaultColor: "#F5CD2F" },
-  { id: "plate-1x2", name: "1×2 Plaka", category: "Classic", w: 2, h: 1, shape: "rect", icon: "▬", defaultColor: "#F5CD2F" },
-  { id: "plate-2x2", name: "2×2 Plaka", category: "Classic", w: 2, h: 2, shape: "rect", icon: "▬", defaultColor: "#0055BF" },
-  { id: "plate-2x4", name: "2×4 Plaka", category: "Classic", w: 4, h: 2, shape: "rect", icon: "▬", defaultColor: "#0055BF" },
-  { id: "plate-4x4", name: "4×4 Plaka", category: "Classic", w: 4, h: 4, shape: "rect", icon: "▬", defaultColor: "#CC0000" },
-  { id: "slope-1x1", name: "1×1 Eğim", category: "Classic", w: 1, h: 1, shape: "slope", icon: "◤", defaultColor: "#595D60" },
-  { id: "slope-2x1", name: "2×1 Eğim", category: "Classic", w: 2, h: 1, shape: "slope", icon: "◤", defaultColor: "#595D60" },
-  { id: "slope-2x2", name: "2×2 Eğim", category: "Classic", w: 2, h: 2, shape: "slope", icon: "◤", defaultColor: "#AFB5C7" },
-  { id: "wedge-2x2", name: "2×2 Kama", category: "Classic", w: 2, h: 2, shape: "wedge", icon: "◢", defaultColor: "#AFB5C7" },
-  { id: "cone-1x1", name: "1×1 Koni", category: "Classic", w: 1, h: 1, shape: "round", icon: "▲", defaultColor: "#CC0000" },
-  { id: "cylinder-1x1", name: "1×1 Silindir", category: "Classic", w: 1, h: 1, shape: "round", icon: "⬤", defaultColor: "#AFB5C7" },
-  { id: "tile-1x1", name: "1×1 Düz Karo", category: "Classic", w: 1, h: 1, shape: "rect", icon: "◻", defaultColor: "#FFFFFF", studPattern: "none" },
-  { id: "tile-1x2", name: "1×2 Düz Karo", category: "Classic", w: 2, h: 1, shape: "rect", icon: "▭", defaultColor: "#FFFFFF", studPattern: "none" },
-  { id: "tile-2x2", name: "2×2 Düz Karo", category: "Classic", w: 2, h: 2, shape: "rect", icon: "□", defaultColor: "#FFFFFF", studPattern: "none" },
-  // ── City ──
-  { id: "door-frame", name: "Kapı Çerçevesi", category: "City", w: 2, h: 3, shape: "arch", icon: "🚪", defaultColor: "#AFB5C7" },
-  { id: "window-1x2", name: "Pencere 1×2", category: "City", w: 2, h: 2, shape: "rect", icon: "🪟", defaultColor: "#73C9E7" },
-  { id: "road-plate", name: "Yol Plakası 4×4", category: "City", w: 4, h: 4, shape: "rect", icon: "🛣️", defaultColor: "#595D60", studPattern: "none" },
-  { id: "fence-1x4", name: "Çit 1×4", category: "City", w: 4, h: 1, shape: "rect", icon: "🚧", defaultColor: "#FFFFFF" },
-  { id: "sign-1x2", name: "Tabela 1×2", category: "City", w: 2, h: 1, shape: "rect", icon: "🪧", defaultColor: "#F5CD2F" },
-  { id: "stair-2x4", name: "Merdiven 2×4", category: "City", w: 4, h: 2, shape: "slope", icon: "🪜", defaultColor: "#AFB5C7" },
-  { id: "arch-1x5", name: "Kemer 1×5", category: "City", w: 5, h: 2, shape: "arch", icon: "🌉", defaultColor: "#AFB5C7" },
-  { id: "baseplate-8x8", name: "Taban 8×8", category: "City", w: 8, h: 8, shape: "rect", icon: "⬛", defaultColor: "#237841", studPattern: "none" },
-  // ── Creator ──
-  { id: "round-2x2", name: "Yuvarlak 2×2", category: "Creator", w: 2, h: 2, shape: "round", icon: "⭕", defaultColor: "#FE8A18" },
-  { id: "round-4x4", name: "Yuvarlak 4×4", category: "Creator", w: 4, h: 4, shape: "round", icon: "⭕", defaultColor: "#9C4DC1" },
-  { id: "arch-2x2", name: "Kemerli Kapı 2×2", category: "Creator", w: 2, h: 3, shape: "arch", icon: "🏛️", defaultColor: "#F2E4BC" },
-  { id: "turret-2x2", name: "Kule Taban 2×2", category: "Creator", w: 2, h: 2, shape: "round", icon: "🏰", defaultColor: "#AFB5C7" },
-  { id: "flag-1x2", name: "Bayrak 1×2", category: "Creator", w: 2, h: 1, shape: "slope", icon: "🚩", defaultColor: "#CC0000" },
-  { id: "inv-slope-2x2", name: "Ters Eğim 2×2", category: "Creator", w: 2, h: 2, shape: "slope-inv", icon: "◣", defaultColor: "#595D60" },
-  { id: "hex-2x2", name: "Altıgen 2×2", category: "Creator", w: 2, h: 2, shape: "round", icon: "⬡", defaultColor: "#F5CD2F" },
-  // ── Technic ──
-  { id: "beam-1x5", name: "Kiriş 1×5", category: "Technic", w: 5, h: 1, shape: "beam", icon: "━", defaultColor: "#595D60" },
-  { id: "beam-1x9", name: "Kiriş 1×9", category: "Technic", w: 9, h: 1, shape: "beam", icon: "━━", defaultColor: "#595D60" },
-  { id: "beam-1x13", name: "Kiriş 1×13", category: "Technic", w: 13, h: 1, shape: "beam", icon: "━━━", defaultColor: "#595D60" },
-  { id: "beam-l-shape", name: "L Kiriş", category: "Technic", w: 5, h: 3, shape: "beam", icon: "⌐", defaultColor: "#595D60" },
-  { id: "gear-8t", name: "Dişli 8T", category: "Technic", w: 2, h: 2, shape: "gear", icon: "⚙️", defaultColor: "#595D60" },
-  { id: "gear-24t", name: "Dişli 24T", category: "Technic", w: 4, h: 4, shape: "gear", icon: "⚙️", defaultColor: "#AFB5C7" },
-  { id: "pin-1", name: "Pin", category: "Technic", w: 1, h: 1, shape: "pin", icon: "📌", defaultColor: "#595D60" },
-  { id: "pin-long", name: "Uzun Pin", category: "Technic", w: 2, h: 1, shape: "pin", icon: "📌", defaultColor: "#AFB5C7" },
-  { id: "axle-4", name: "Eksen 4L", category: "Technic", w: 4, h: 1, shape: "pin", icon: "⚊", defaultColor: "#595D60" },
-  { id: "axle-8", name: "Eksen 8L", category: "Technic", w: 8, h: 1, shape: "pin", icon: "⚊⚊", defaultColor: "#595D60" },
-  { id: "motor-l", name: "L Motor", category: "Technic", w: 4, h: 4, shape: "rect", icon: "🔋", defaultColor: "#FE8A18" },
-  { id: "tech-panel-5x7", name: "Panel 5×7", category: "Technic", w: 5, h: 7, shape: "rect", icon: "📋", defaultColor: "#AFB5C7", studPattern: "edge" },
-  // ── Doğa ──
-  { id: "tree-trunk", name: "Ağaç Gövdesi", category: "Doğa", w: 1, h: 1, shape: "tree", icon: "🪵", defaultColor: "#5F3109" },
-  { id: "leaf-round-lg", name: "Büyük Yaprak", category: "Doğa", w: 4, h: 4, shape: "leaf", icon: "🌿", defaultColor: "#237841" },
-  { id: "leaf-round-sm", name: "Küçük Yaprak", category: "Doğa", w: 2, h: 2, shape: "leaf", icon: "🍃", defaultColor: "#4DBB3A" },
-  { id: "flower", name: "Çiçek", category: "Doğa", w: 1, h: 1, shape: "round", icon: "🌸", defaultColor: "#FC97AC" },
-  { id: "cactus", name: "Kaktüs", category: "Doğa", w: 2, h: 3, shape: "tree", icon: "🌵", defaultColor: "#4DBB3A" },
-  { id: "rock-1x2", name: "Kaya 1×2", category: "Doğa", w: 2, h: 1, shape: "round", icon: "🪨", defaultColor: "#AFB5C7" },
-  { id: "rock-2x2", name: "Kaya 2×2", category: "Doğa", w: 2, h: 2, shape: "round", icon: "🪨", defaultColor: "#595D60" },
-  { id: "grass-4x4", name: "Çim 4×4", category: "Doğa", w: 4, h: 4, shape: "rect", icon: "🌱", defaultColor: "#4DBB3A", studPattern: "none" },
-  { id: "water-4x4", name: "Su 4×4", category: "Doğa", w: 4, h: 4, shape: "rect", icon: "💧", defaultColor: "#73C9E7", studPattern: "none" },
-  { id: "sand-2x4", name: "Kum 2×4", category: "Doğa", w: 4, h: 2, shape: "rect", icon: "🏜️", defaultColor: "#D4AF37", studPattern: "none" },
-];
+/* ────── helpers ────── */
+function uid() { return Math.random().toString(36).slice(2, 11); }
 
-const CATEGORIES = ["Tümü", "Classic", "City", "Creator", "Technic", "Doğa"] as const;
-type CategoryFilter = typeof CATEGORIES[number];
-
-const CATEGORY_ICONS: Record<CategoryFilter, React.ReactNode> = {
-  "Tümü": <Grid3X3 size={14} />,
-  "Classic": <Package size={14} />,
-  "City": <Star size={14} />,
-  "Creator": <Layers size={14} />,
-  "Technic": <Wrench size={14} />,
-  "Doğa": <Trees size={14} />,
-};
-
-// ─── Grid config ──────────────────────────────────────────────────────────────
-const GRID_COLS = 32;
-const GRID_ROWS = 32;
-const CELL_PX = 20; // pixels per grid cell
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function uid() {
-  return Math.random().toString(36).slice(2, 11);
+function darken(hex: string, amt = 40) {
+  const n = parseInt(hex.replace("#",""), 16);
+  return `#${[n>>16, (n>>8)&0xff, n&0xff].map(c=>Math.max(0,c-amt).toString(16).padStart(2,"0")).join("")}`;
+}
+function lighten(hex: string, amt = 50) {
+  const n = parseInt(hex.replace("#",""), 16);
+  return `#${[n>>16, (n>>8)&0xff, n&0xff].map(c=>Math.min(255,c+amt).toString(16).padStart(2,"0")).join("")}`;
 }
 
-function darken(hex: string, amount = 30) {
-  const n = parseInt(hex.replace("#", ""), 16);
-  const r = Math.max(0, (n >> 16) - amount);
-  const g = Math.max(0, ((n >> 8) & 0xff) - amount);
-  const b = Math.max(0, (n & 0xff) - amount);
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-}
-
-function lighten(hex: string, amount = 40) {
-  const n = parseInt(hex.replace("#", ""), 16);
-  const r = Math.min(255, (n >> 16) + amount);
-  const g = Math.min(255, ((n >> 8) & 0xff) + amount);
-  const b = Math.min(255, (n & 0xff) + amount);
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
-}
-
-// ─── Brick SVG renderer ───────────────────────────────────────────────────────
-function BrickSVG({
-  part,
-  color,
-  cellPx,
-  selected,
-}: {
-  part: LegoPart;
-  color: string;
-  cellPx: number;
-  selected: boolean;
+/* ────── SVG Brick Renderer ────── */
+function BrickSVG({ partId, w, h, color, selected }: {
+  partId: string; w: number; h: number; color: string; selected: boolean;
 }) {
-  const w = part.w * cellPx;
-  const h = part.h * cellPx;
-  const studR = cellPx * 0.28;
-  const dark = darken(color, 35);
-  const light = lighten(color, 45);
+  const pw = w * CELL;
+  const ph = h * CELL;
+  const def = PART_DEFS.find(p => p.id === partId);
+  const shape = def?.shape ?? "brick";
+  const dk = darken(color, 40);
+  const lt = lighten(color, 55);
+  const studR = CELL * 0.30;
 
+  /* stud grid for rect shapes */
   const studs: React.ReactNode[] = [];
-  if (part.studPattern !== "none" && part.shape !== "gear" && part.shape !== "pin" && part.shape !== "beam") {
-    for (let row = 0; row < part.h; row++) {
-      for (let col = 0; col < part.w; col++) {
-        const cx = col * cellPx + cellPx / 2;
-        const cy = row * cellPx + cellPx / 2;
-        studs.push(
-          <g key={`${row}-${col}`}>
-            <ellipse cx={cx} cy={cy} rx={studR} ry={studR * 0.6} fill={lighten(color, 25)} stroke={dark} strokeWidth={0.5} />
-            <ellipse cx={cx} cy={cy - studR * 0.15} rx={studR * 0.85} ry={studR * 0.5} fill={light} opacity={0.55} />
-          </g>
-        );
-      }
+  if (!["tile","beam","gear","grass","rock"].includes(shape)) {
+    const cols = Math.max(1, w);
+    const rows = Math.max(1, h);
+    for (let r=0; r<rows; r++) for (let c=0; c<cols; c++) {
+      const cx = c*CELL + CELL/2;
+      const cy = r*CELL + CELL/2;
+      studs.push(
+        <g key={`${r}-${c}`}>
+          <ellipse cx={cx} cy={cy} rx={studR} ry={studR*0.6} fill={lighten(color,20)} stroke={dk} strokeWidth={0.5}/>
+          <ellipse cx={cx} cy={cy-studR*0.12} rx={studR*0.7} ry={studR*0.4} fill={lt} opacity={0.5}/>
+        </g>
+      );
     }
   }
 
-  let shape: React.ReactNode;
-  if (part.shape === "round" || part.shape === "leaf") {
-    const rx = w / 2;
-    const ry = h / 2;
-    shape = (
-      <>
-        <ellipse cx={rx} cy={ry} rx={rx - 1} ry={ry - 1} fill={color} stroke={dark} strokeWidth={1.5} />
-        <ellipse cx={rx} cy={ry - ry * 0.15} rx={rx * 0.7} ry={ry * 0.4} fill={light} opacity={0.3} />
-        {studs}
-      </>
-    );
-  } else if (part.shape === "slope") {
-    shape = (
-      <>
-        <polygon points={`0,${h} ${w},${h} ${w},0`} fill={color} stroke={dark} strokeWidth={1.5} />
-        <polygon points={`${w * 0.3},${h} ${w},${h} ${w},${h * 0.3}`} fill={light} opacity={0.2} />
-      </>
-    );
-  } else if (part.shape === "slope-inv") {
-    shape = (
-      <>
-        <polygon points={`0,0 ${w},0 0,${h}`} fill={color} stroke={dark} strokeWidth={1.5} />
-        <polygon points={`0,0 ${w * 0.7},0 0,${h * 0.7}`} fill={light} opacity={0.2} />
-      </>
-    );
-  } else if (part.shape === "wedge") {
-    shape = (
-      <>
-        <polygon points={`0,${h} ${w},${h} ${w},0`} fill={color} stroke={dark} strokeWidth={1.5} />
-        <polygon points={`${w * 0.05},${h * 0.95} ${w * 0.95},${h * 0.95} ${w * 0.95},${h * 0.1}`} fill={light} opacity={0.18} />
-      </>
-    );
-  } else if (part.shape === "arch") {
-    const midX = w / 2;
-    shape = (
-      <>
-        <rect x={1} y={h / 2} width={w - 2} height={h / 2 - 1} fill={color} stroke={dark} strokeWidth={1} />
-        <path d={`M1,${h / 2} A${midX - 1},${h / 2 - 1} 0 0,1 ${w - 1},${h / 2}`} fill={color} stroke={dark} strokeWidth={1.5} />
-        <rect x={1} y={1} width={cellPx - 2} height={h / 2 - 1} fill={color} stroke={dark} strokeWidth={1} />
-        <rect x={w - cellPx + 1} y={1} width={cellPx - 2} height={h / 2 - 1} fill={color} stroke={dark} strokeWidth={1} />
-        {studs}
-      </>
-    );
-  } else if (part.shape === "tree") {
-    // brown trunk + simple tree silhouette
-    shape = (
-      <>
-        <rect x={1} y={1} width={w - 2} height={h - 2} rx={3} fill={color} stroke={dark} strokeWidth={1.5} />
-        <rect x={w * 0.25} y={1} width={w * 0.5} height={h * 0.3} fill={lighten(color, 30)} opacity={0.4} rx={2} />
-        {studs}
-      </>
-    );
-  } else if (part.shape === "gear") {
-    const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - 2;
-    const teeth = part.id === "gear-8t" ? 8 : 24;
-    const teethPoints: string[] = [];
-    for (let i = 0; i < teeth; i++) {
-      const a = (i / teeth) * Math.PI * 2;
-      const ai = ((i + 0.5) / teeth) * Math.PI * 2;
-      teethPoints.push(`${cx + Math.cos(a) * r},${cy + Math.sin(a) * r}`);
-      teethPoints.push(`${cx + Math.cos(ai) * (r + 3)},${cy + Math.sin(ai) * (r + 3)}`);
+  let body: React.ReactNode;
+
+  if (shape === "brick" || shape === "plate" || shape === "tile") {
+    const thick = shape === "plate" ? 0.65 : 1.0;
+    body = <>
+      <rect x={1} y={1} width={pw-2} height={ph-2} rx={3} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <rect x={3} y={3} width={pw-6} height={(ph-6)*0.32} rx={2} fill={lt} opacity={0.35}/>
+      <rect x={3} y={ph-5} width={pw-6} height={3} rx={1} fill={dk} opacity={0.2}/>
+      {shape !== "tile" && studs}
+    </>;
+  } else if (shape === "slope") {
+    body = <>
+      <polygon points={`1,${ph-1} ${pw-1},${ph-1} ${pw-1},1`} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <polygon points={`${pw*0.6},${ph*0.85} ${pw-3},${ph-3} ${pw-3},${ph*0.15}`} fill={lt} opacity={0.22}/>
+    </>;
+  } else if (shape === "wedge") {
+    body = <>
+      <polygon points={`1,1 ${pw-1},1 1,${ph-1}`} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <polygon points={`3,3 ${pw*0.5},3 3,${ph*0.5}`} fill={lt} opacity={0.22}/>
+    </>;
+  } else if (shape === "cylinder") {
+    const rx = pw/2 - 2, ry = ph/2 - 2;
+    body = <>
+      <ellipse cx={pw/2} cy={ph/2} rx={rx} ry={ry} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <ellipse cx={pw/2} cy={ph/2 - ry*0.15} rx={rx*0.65} ry={ry*0.35} fill={lt} opacity={0.35}/>
+      {studs}
+    </>;
+  } else if (shape === "cone") {
+    body = <>
+      <polygon points={`${pw/2},2 ${pw-2},${ph-2} 2,${ph-2}`} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <polygon points={`${pw/2},5 ${pw*0.7},${ph-5} ${pw*0.3},${ph-5}`} fill={lt} opacity={0.22}/>
+    </>;
+  } else if (shape === "arch") {
+    const mid = pw/2;
+    body = <>
+      <rect x={1} y={ph*0.45} width={pw-2} height={ph*0.55-1} fill={color} stroke={dk} strokeWidth={1}/>
+      <path d={`M2,${ph*0.45} A${mid-2},${ph*0.45-1} 0 0,1 ${pw-2},${ph*0.45}`} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <rect x={1} y={1} width={CELL*1.2} height={ph*0.45} fill={color} stroke={dk} strokeWidth={1}/>
+      <rect x={pw-CELL*1.2-1} y={1} width={CELL*1.2} height={ph*0.45} fill={color} stroke={dk} strokeWidth={1}/>
+      {studs}
+    </>;
+  } else if (shape === "window") {
+    body = <>
+      <rect x={1} y={1} width={pw-2} height={ph-2} rx={2} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <rect x={CELL*0.4} y={CELL*0.4} width={pw-CELL*0.8} height={ph-CELL*0.8} rx={2} fill="#73C9E7" opacity={0.7} stroke={dk} strokeWidth={1}/>
+      <line x1={pw/2} y1={CELL*0.4} x2={pw/2} y2={ph-CELL*0.4} stroke={dk} strokeWidth={1.5}/>
+      <line x1={CELL*0.4} y1={ph/2} x2={pw-CELL*0.4} y2={ph/2} stroke={dk} strokeWidth={1.5}/>
+    </>;
+  } else if (shape === "door") {
+    const arch = ph * 0.45;
+    body = <>
+      <rect x={1} y={arch} width={pw-2} height={ph-arch-1} fill={color} stroke={dk} strokeWidth={1}/>
+      <path d={`M2,${arch} A${pw/2-2},${arch} 0 0,1 ${pw-2},${arch}`} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <rect x={2} y={arch+2} width={pw-4} height={ph-arch-4} fill={darken(color,15)} opacity={0.35}/>
+      <circle cx={pw-CELL*0.6} cy={(ph+arch)/2} r={3} fill={dk}/>
+    </>;
+  } else if (shape === "beam") {
+    body = <>
+      <rect x={1} y={ph*0.2} width={pw-2} height={ph*0.6} rx={3} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <rect x={3} y={ph*0.23} width={pw-6} height={ph*0.22} rx={2} fill={lt} opacity={0.3}/>
+      {Array.from({length: w}).map((_,i) => (
+        <circle key={i} cx={i*CELL + CELL/2} cy={ph/2} r={CELL*0.25} fill={dk} stroke={darken(color,60)} strokeWidth={0.8}/>
+      ))}
+    </>;
+  } else if (shape === "gear") {
+    const cx = pw/2, cy = ph/2;
+    const R = Math.min(pw,ph)/2 - 3;
+    const teeth = Math.max(6, Math.round(w*3));
+    const pts: string[] = [];
+    for (let i=0; i<teeth; i++) {
+      const a0 = (i/teeth)*Math.PI*2;
+      const a1 = ((i+0.5)/teeth)*Math.PI*2;
+      pts.push(`${cx+Math.cos(a0)*R},${cy+Math.sin(a0)*R}`);
+      pts.push(`${cx+Math.cos(a1)*(R+4)},${cy+Math.sin(a1)*(R+4)}`);
     }
-    shape = (
-      <>
-        <polygon points={teethPoints.join(" ")} fill={color} stroke={dark} strokeWidth={1} />
-        <circle cx={cx} cy={cy} r={r * 0.5} fill={dark} />
-        <circle cx={cx} cy={cy} r={r * 0.25} fill={color} />
-      </>
-    );
-  } else if (part.shape === "pin") {
-    shape = (
-      <>
-        <rect x={1} y={h * 0.3} width={w - 2} height={h * 0.4} rx={h * 0.2} fill={color} stroke={dark} strokeWidth={1.5} />
-        <circle cx={cellPx / 2} cy={h / 2} r={h * 0.28} fill={light} />
-        <circle cx={w - cellPx / 2} cy={h / 2} r={h * 0.28} fill={light} />
-      </>
-    );
-  } else if (part.shape === "beam") {
-    shape = (
-      <>
-        <rect x={1} y={h * 0.25} width={w - 2} height={h * 0.5} rx={2} fill={color} stroke={dark} strokeWidth={1.2} />
-        {Array.from({ length: part.w }).map((_, i) => (
-          <circle key={i} cx={i * cellPx + cellPx / 2} cy={h / 2} r={cellPx * 0.22} fill={dark} stroke={darken(color, 60)} strokeWidth={0.8} />
-        ))}
-        <rect x={2} y={h * 0.27} width={w - 4} height={h * 0.2} fill={light} opacity={0.3} rx={2} />
-      </>
-    );
+    body = <>
+      <polygon points={pts.join(" ")} fill={color} stroke={dk} strokeWidth={1}/>
+      <circle cx={cx} cy={cy} r={R*0.45} fill={dk}/>
+      <circle cx={cx} cy={cy} r={R*0.22} fill={lt}/>
+    </>;
+  } else if (shape === "tree") {
+    body = <>
+      <rect x={pw*0.25} y={1} width={pw*0.5} height={ph-2} rx={4} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <rect x={pw*0.3} y={3} width={pw*0.3} height={ph*0.4} rx={2} fill={lt} opacity={0.3}/>
+      {studs}
+    </>;
+  } else if (shape === "leaf") {
+    const rx = pw/2-2, ry = ph/2-2;
+    body = <>
+      <ellipse cx={pw/2} cy={ph/2} rx={rx} ry={ry} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <ellipse cx={pw/2} cy={ph/2 - ry*0.15} rx={rx*0.5} ry={ry*0.3} fill={lt} opacity={0.4}/>
+      <line x1={pw/2} y1={ph*0.2} x2={pw/2} y2={ph*0.8} stroke={dk} strokeWidth={1} opacity={0.4}/>
+    </>;
+  } else if (shape === "rock") {
+    const pts = `${pw*0.15},${ph*0.8} ${pw*0.05},${ph*0.45} ${pw*0.25},${ph*0.1} ${pw*0.6},${ph*0.05} ${pw*0.92},${ph*0.35} ${pw*0.88},${ph*0.75} ${pw*0.55},${ph*0.95}`;
+    body = <>
+      <polygon points={pts} fill={color} stroke={dk} strokeWidth={1.5}/>
+      <polygon points={`${pw*0.25},${ph*0.18} ${pw*0.55},${ph*0.08} ${pw*0.75},${ph*0.25} ${pw*0.4},${ph*0.35}`} fill={lt} opacity={0.25}/>
+    </>;
+  } else if (shape === "grass") {
+    body = <>
+      <rect x={1} y={1} width={pw-2} height={ph-2} rx={2} fill={color} stroke={dk} strokeWidth={1.5}/>
+      {Array.from({length: Math.floor(w*h/2)}).map((_,i)=> {
+        const gx = (i % w) * CELL + CELL*0.3 + Math.random()*CELL*0.4;
+        const gy = Math.floor(i/w)*CELL + CELL*0.2;
+        return <line key={i} x1={gx} y1={gy+CELL*0.5} x2={gx} y2={gy} stroke={darken(color,20)} strokeWidth={1.5}/>;
+      })}
+    </>;
   } else {
-    // default rect
-    shape = (
-      <>
-        <rect x={1} y={1} width={w - 2} height={h - 2} rx={2} fill={color} stroke={dark} strokeWidth={1.5} />
-        {/* highlight */}
-        <rect x={3} y={3} width={w - 6} height={(h - 6) * 0.35} rx={1} fill={light} opacity={0.35} />
-        {/* bottom shadow */}
-        <rect x={3} y={h - 4} width={w - 6} height={2} rx={1} fill={dark} opacity={0.25} />
-        {studs}
-      </>
-    );
+    body = <rect x={1} y={1} width={pw-2} height={ph-2} rx={3} fill={color} stroke={dk} strokeWidth={1.5}/>;
   }
 
   return (
-    <svg
-      width={w}
-      height={h}
-      style={{
-        display: "block",
-        filter: selected ? "drop-shadow(0 0 6px rgba(99,179,237,0.9))" : "drop-shadow(1px 2px 3px rgba(0,0,0,0.3))",
-        outline: selected ? "2px solid #63B3ED" : "none",
-        borderRadius: 3,
-      }}
-    >
-      {shape}
+    <svg width={pw} height={ph} style={{display:"block", overflow:"visible",
+      filter: selected
+        ? "drop-shadow(0 0 8px rgba(59,130,246,0.9)) drop-shadow(0 0 3px #3b82f6)"
+        : "drop-shadow(1px 2px 4px rgba(0,0,0,0.35))"
+    }}>
+      {body}
     </svg>
   );
 }
 
-// ─── Part Card (sidebar) ──────────────────────────────────────────────────────
-function PartCard({ part, selected, onSelect }: { part: LegoPart; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      onClick={onSelect}
-      title={part.name}
-      className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all cursor-pointer text-center hover:scale-105 active:scale-95 ${
-        selected
-          ? "border-lego-blue bg-lego-blue/10 shadow-md"
-          : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600"
-      }`}
-    >
-      <div className="w-10 h-10 flex items-center justify-center text-2xl leading-none">
-        <BrickSVG
-          part={part}
-          color={part.defaultColor}
-          cellPx={Math.min(20, Math.floor(40 / Math.max(part.w, part.h)))}
-          selected={false}
-        />
-      </div>
-      <span className="text-[10px] font-bold leading-tight text-zinc-600 dark:text-zinc-300 line-clamp-2">{part.name}</span>
-    </button>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
+/* ════════════════════════════════════════════════════════
+   MAIN COMPONENT
+════════════════════════════════════════════════════════ */
 export default function LegoDesigner() {
-  const [placed, setPlaced] = useState<PlacedBrick[]>([]);
-  const [selectedUid, setSelectedUid] = useState<string | null>(null);
-  const [activePart, setActivePart] = useState<LegoPart>(PARTS[3]); // 2×4 default
-  const [activeColor, setActiveColor] = useState(LEGO_COLORS[0].hex);
-  const [category, setCategory] = useState<CategoryFilter>("Tümü");
-  const [search, setSearch] = useState("");
+  const [bricks, setBricks] = useState<Brick[]>([]);
+  const [selectedId, setSelectedId] = useState<string|null>(null);
+  const [activeDef, setActiveDef] = useState<PartDef>(PART_DEFS[0]);
+  const [activeColor, setActiveColor] = useState("#CC0000");
   const [zoom, setZoom] = useState(1);
-  const [savedMsg, setSavedMsg] = useState<string | null>(null);
-  const [showColors, setShowColors] = useState(false);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [tool, setTool] = useState<"place"|"move">("place");
+  const [savedMsg, setSavedMsg] = useState<string|null>(null);
+  const [catFilter, setCatFilter] = useState<string>("Temel");
 
-  // Derived
-  const filteredParts = PARTS.filter((p) => {
-    const catOk = category === "Tümü" || p.category === category;
-    const searchOk = search === "" || p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
-    return catOk && searchOk;
-  });
+  // Ghost preview while hovering in place mode
+  const [ghost, setGhost] = useState<{x:number,y:number}|null>(null);
 
-  // Selected brick
-  const selectedBrick = placed.find((b) => b.uid === selectedUid) ?? null;
-  const selectedPart = selectedBrick ? PARTS.find((p) => p.id === selectedBrick.partId) : null;
+  // Dragging state
+  const dragRef = useRef<{uid:string, startMouseX:number, startMouseY:number, startBrickX:number, startBrickY:number}|null>(null);
 
-  // Compute top layer at a cell (for stacking)
-  const topLayerAt = useCallback(
-    (x: number, y: number, partW: number, partH: number) => {
-      let max = 0;
-      for (const b of placed) {
-        const bp = PARTS.find((p) => p.id === b.partId);
-        if (!bp) continue;
-        const bW = b.rotation % 180 === 0 ? bp.w : bp.h;
-        const bH = b.rotation % 180 === 0 ? bp.h : bp.w;
-        // Check overlap
-        if (b.x < x + partW && b.x + bW > x && b.y < y + partH && b.y + bH > y) {
-          max = Math.max(max, b.layer + 1);
-        }
-      }
-      return max;
-    },
-    [placed]
-  );
+  const workspaceRef = useRef<HTMLDivElement>(null);
 
-  // Place brick on grid click
-  const handleGridClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!gridRef.current) return;
-      const rect = gridRef.current.getBoundingClientRect();
-      const px = (e.clientX - rect.left) / zoom;
-      const py = (e.clientY - rect.top) / zoom;
-      const col = Math.floor(px / CELL_PX);
-      const row = Math.floor(py / CELL_PX);
-      if (col < 0 || row < 0 || col >= GRID_COLS || row >= GRID_ROWS) return;
+  const selectedBrick = bricks.find(b=>b.uid===selectedId) ?? null;
+  const selectedDef = selectedBrick ? PART_DEFS.find(p=>p.id===selectedBrick.partId) : null;
 
-      const partW = activePart.w;
-      const partH = activePart.h;
-      const x = Math.min(col, GRID_COLS - partW);
-      const y = Math.min(row, GRID_ROWS - partH);
-      const layer = topLayerAt(x, y, partW, partH);
+  /* ── layer helper ── */
+  const getLayer = useCallback((x:number,y:number,w:number,h:number, excludeUid?:string) => {
+    let max = 0;
+    for (const b of bricks) {
+      if (b.uid===excludeUid) continue;
+      const bW = b.rotation%180===0 ? b.w : b.h;
+      const bH = b.rotation%180===0 ? b.h : b.w;
+      if (b.x < x+w && b.x+bW > x && b.y < y+h && b.y+bH > y)
+        max = Math.max(max, b.layer+1);
+    }
+    return max;
+  }, [bricks]);
 
-      const newBrick: PlacedBrick = {
-        uid: uid(),
-        partId: activePart.id,
-        x,
-        y,
-        layer,
-        color: activeColor,
-        rotation: 0,
-      };
-      setPlaced((prev) => [...prev, newBrick]);
-      setSelectedUid(newBrick.uid);
-    },
-    [activePart, activeColor, topLayerAt, zoom]
-  );
+  /* ── client pos → grid cell ── */
+  const clientToCell = useCallback((clientX:number, clientY:number) => {
+    if (!workspaceRef.current) return null;
+    const rect = workspaceRef.current.getBoundingClientRect();
+    const px = (clientX - rect.left) / zoom;
+    const py = (clientY - rect.top) / zoom;
+    return {
+      x: Math.max(0, Math.min(GRID_W-1, Math.floor(px/CELL))),
+      y: Math.max(0, Math.min(GRID_H-1, Math.floor(py/CELL)))
+    };
+  },[zoom]);
 
+  /* ── Place brick ── */
+  const placeBrick = useCallback((clientX:number, clientY:number) => {
+    const cell = clientToCell(clientX, clientY);
+    if (!cell) return;
+    const w = activeDef.defaultW;
+    const h = activeDef.defaultH;
+    const x = Math.min(cell.x, GRID_W-w);
+    const y = Math.min(cell.y, GRID_H-h);
+    const layer = getLayer(x,y,w,h);
+    const b: Brick = { uid:uid(), partId:activeDef.id, x, y, w, h, color:activeColor, rotation:0, layer };
+    setBricks(prev=>[...prev, b]);
+    setSelectedId(b.uid);
+  },[activeDef, activeColor, clientToCell, getLayer]);
+
+  /* ── Workspace mouse events ── */
+  const onWorkspaceMouseMove = useCallback((e:React.MouseEvent) => {
+    if (tool==="place") {
+      const cell = clientToCell(e.clientX, e.clientY);
+      if (cell) setGhost(cell);
+    }
+    if (tool==="move" && dragRef.current) {
+      const dx = e.clientX - dragRef.current.startMouseX;
+      const dy = e.clientY - dragRef.current.startMouseY;
+      const dcx = Math.round(dx/CELL/zoom);
+      const dcy = Math.round(dy/CELL/zoom);
+      const newX = Math.max(0, Math.min(GRID_W-1, dragRef.current.startBrickX + dcx));
+      const newY = Math.max(0, Math.min(GRID_H-1, dragRef.current.startBrickY + dcy));
+      setBricks(prev=>prev.map(b=>b.uid===dragRef.current!.uid ? {...b, x:newX, y:newY} : b));
+    }
+  },[tool, clientToCell, zoom]);
+
+  const onWorkspaceMouseLeave = () => setGhost(null);
+
+  const onWorkspaceClick = useCallback((e:React.MouseEvent) => {
+    if (tool==="place" && !dragRef.current) {
+      placeBrick(e.clientX, e.clientY);
+    } else if (tool==="move") {
+      setSelectedId(null);
+    }
+  },[tool, placeBrick]);
+
+  const onWorkspaceMouseUp = useCallback(() => {
+    dragRef.current = null;
+  },[]);
+
+  const onBrickMouseDown = useCallback((e:React.MouseEvent, b:Brick) => {
+    e.stopPropagation();
+    setSelectedId(b.uid);
+    if (tool==="move") {
+      dragRef.current = { uid:b.uid, startMouseX:e.clientX, startMouseY:e.clientY, startBrickX:b.x, startBrickY:b.y };
+    }
+  },[tool]);
+
+  /* ── Selected brick operations ── */
   const deleteSelected = () => {
-    setPlaced((prev) => prev.filter((b) => b.uid !== selectedUid));
-    setSelectedUid(null);
+    setBricks(prev=>prev.filter(b=>b.uid!==selectedId));
+    setSelectedId(null);
   };
-
   const rotateSelected = () => {
-    setPlaced((prev) =>
-      prev.map((b) => (b.uid === selectedUid ? { ...b, rotation: (b.rotation + 90) % 360 } : b))
-    );
+    setBricks(prev=>prev.map(b=>b.uid===selectedId ? {...b, rotation:(b.rotation+90)%360, w:b.h, h:b.w} : b));
   };
-
-  const changeSelectedColor = (hex: string) => {
-    setPlaced((prev) => prev.map((b) => (b.uid === selectedUid ? { ...b, color: hex } : b)));
+  const changeW = (delta:number) => {
+    if (!selectedBrick || !selectedDef) return;
+    const nw = Math.max(selectedDef.minW, Math.min(selectedDef.maxW, selectedBrick.w+delta));
+    setBricks(prev=>prev.map(b=>b.uid===selectedId ? {...b, w:nw} : b));
   };
-
-  const clearAll = () => {
-    setPlaced([]);
-    setSelectedUid(null);
+  const changeH = (delta:number) => {
+    if (!selectedBrick || !selectedDef) return;
+    const nh = Math.max(selectedDef.minH, Math.min(selectedDef.maxH, selectedBrick.h+delta));
+    setBricks(prev=>prev.map(b=>b.uid===selectedId ? {...b, h:nh} : b));
+  };
+  const changeColor = (hex:string) => {
+    setActiveColor(hex);
+    if (selectedId) setBricks(prev=>prev.map(b=>b.uid===selectedId ? {...b, color:hex} : b));
   };
 
   const saveDesign = () => {
     try {
-      const key = "lego_designer_saves";
-      const existing = JSON.parse(localStorage.getItem(key) || "[]");
-      existing.push({ id: Date.now(), placed, timestamp: new Date().toISOString() });
-      localStorage.setItem(key, JSON.stringify(existing));
-      setSavedMsg("✅ Tasarım kaydedildi!");
-    } catch {
-      setSavedMsg("❌ Kaydetme hatası");
-    }
-    setTimeout(() => setSavedMsg(null), 2500);
+      const saves = JSON.parse(localStorage.getItem("lego_designer_v2")||"[]");
+      saves.push({id:Date.now(), bricks, ts:new Date().toISOString()});
+      localStorage.setItem("lego_designer_v2", JSON.stringify(saves));
+      setSavedMsg("✅ Kaydedildi!");
+    } catch { setSavedMsg("❌ Hata"); }
+    setTimeout(()=>setSavedMsg(null), 2000);
   };
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Delete" || e.key === "Backspace") deleteSelected();
-      if (e.key === "r" || e.key === "R") rotateSelected();
-      if (e.key === "Escape") setSelectedUid(null);
+  /* ── Keyboard shortcuts ── */
+  useEffect(()=>{
+    const fn = (e:KeyboardEvent) => {
+      if (["INPUT","TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key==="Delete"||e.key==="Backspace") deleteSelected();
+      if (e.key==="r"||e.key==="R") rotateSelected();
+      if (e.key==="Escape") setSelectedId(null);
+      if (e.key==="p"||e.key==="P") setTool("place");
+      if (e.key==="m"||e.key==="M") setTool("move");
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", fn);
+    return ()=>window.removeEventListener("keydown", fn);
   });
 
-  // Sort placed by layer then y then x for correct rendering
-  const sortedPlaced = [...placed].sort((a, b) => a.layer - b.layer || a.y - b.y || a.x - b.x);
+  const filteredDefs = PART_DEFS.filter(p=>p.category===catFilter);
+  const sorted = [...bricks].sort((a,b)=>a.layer-b.layer);
+
+  // Ghost display W/H (may be rotated)
+  const ghostW = activeDef.defaultW;
+  const ghostH = activeDef.defaultH;
 
   return (
-    <div className="flex flex-col h-full min-h-[700px] gap-0">
-      {/* ── Header Bar ── */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+    <div className="flex flex-col bg-zinc-900 text-white" style={{height:"calc(100vh - 80px)", minHeight:600}}>
+
+      {/* ─── Top Bar ─── */}
+      <div className="flex items-center justify-between px-5 py-3 bg-zinc-950 border-b border-zinc-800 gap-4 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-lego-red rounded-xl flex items-center justify-center text-white shadow-lg">
-            🧱
-          </div>
+          <span className="text-2xl">🧱</span>
           <div>
-            <h2 className="text-xl font-black tracking-tight">LEGO Tasarımcı</h2>
-            <p className="text-xs text-zinc-500 font-medium">
-              {placed.length} parça yerleştirildi · Tıkla yerleştir · R döndür · Del sil
-            </p>
+            <h2 className="font-black text-lg leading-none">LEGO Tasarımcı</h2>
+            <p className="text-[11px] text-zinc-400 mt-0.5">{bricks.length} parça · P: yerleştir · M: taşı · R: döndür · Del: sil</p>
           </div>
         </div>
+
+        {/* Tool selector */}
+        <div className="flex bg-zinc-800 p-1 rounded-xl gap-1">
+          <button onClick={()=>setTool("place")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${tool==="place" ? "bg-lego-red text-white shadow" : "text-zinc-400 hover:text-white"}`}>
+            <MousePointer size={15}/> Yerleştir
+          </button>
+          <button onClick={()=>setTool("move")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${tool==="move" ? "bg-blue-600 text-white shadow" : "text-zinc-400 hover:text-white"}`}>
+            <Move size={15}/> Taşı
+          </button>
+        </div>
+
+        {/* Zoom */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-            className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-            title="Uzaklaştır"
-          >
-            <ZoomOut size={18} />
+          <button onClick={()=>setZoom(z=>Math.max(0.4,z-0.2))} className="p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700"><ZoomOut size={16}/></button>
+          <span className="text-sm font-mono w-10 text-center text-zinc-300">{Math.round(zoom*100)}%</span>
+          <button onClick={()=>setZoom(z=>Math.min(2.5,z+0.2))} className="p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700"><ZoomIn size={16}/></button>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          {savedMsg && <span className="text-sm font-bold px-3 py-2 bg-zinc-800 rounded-lg">{savedMsg}</span>}
+          <button onClick={saveDesign} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-colors">
+            <Save size={15}/> Kaydet
           </button>
-          <span className="text-sm font-bold text-zinc-500 w-12 text-center">{Math.round(zoom * 100)}%</span>
-          <button
-            onClick={() => setZoom((z) => Math.min(3, z + 0.25))}
-            className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-            title="Yakınlaştır"
-          >
-            <ZoomIn size={18} />
-          </button>
-          <button
-            onClick={saveDesign}
-            className="flex items-center gap-2 px-4 py-2 bg-lego-blue text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-md"
-          >
-            <Save size={16} /> Kaydet
-          </button>
-          <button
-            onClick={clearAll}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-lego-red font-bold rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-          >
-            <Trash2 size={16} /> Temizle
+          <button onClick={()=>{setBricks([]);setSelectedId(null);}} className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-red-900/50 text-red-400 font-bold rounded-xl text-sm transition-colors">
+            <Trash2 size={15}/> Temizle
           </button>
         </div>
       </div>
 
-      {/* ── Save message toast ── */}
-      <AnimatePresence>
-        {savedMsg && (
-          <motion.div
-            initial={{ y: -30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -30, opacity: 0 }}
-            className="absolute top-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 text-white px-6 py-3 rounded-full font-bold shadow-xl"
-          >
-            {savedMsg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+      {/* ─── Main Layout ─── */}
       <div className="flex flex-1 overflow-hidden">
-        {/* ── LEFT PANEL: Part Library ── */}
-        <div className="w-64 flex-shrink-0 bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
-          {/* Search */}
-          <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-              <input
-                type="text"
-                placeholder="Parça ara..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-lego-blue transition-all"
-              />
-              {search && (
-                <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-foreground">
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          </div>
 
-          {/* Category Tabs */}
-          <div className="flex flex-wrap gap-1 p-2 border-b border-zinc-200 dark:border-zinc-800">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                  category === cat
-                    ? "bg-lego-red text-white shadow"
-                    : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700"
-                }`}
-              >
-                {CATEGORY_ICONS[cat]}
+        {/* ══ LEFT: Part Library ══ */}
+        <div className="w-52 flex-shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
+          {/* Category tabs */}
+          <div className="flex flex-col gap-0.5 p-2 border-b border-zinc-800">
+            {CATEGORIES.map(cat=>(
+              <button key={cat} onClick={()=>setCatFilter(cat)}
+                className={`text-left px-3 py-2 rounded-lg text-sm font-bold transition-all ${catFilter===cat ? "bg-lego-red text-white" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"}`}>
                 {cat}
               </button>
             ))}
           </div>
 
-          {/* Part count */}
-          <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-            {filteredParts.length} parça
-          </div>
-
-          {/* Parts Grid */}
-          <div className="flex-1 overflow-y-auto p-2">
-            <div className="grid grid-cols-3 gap-1.5">
-              {filteredParts.map((part) => (
-                <PartCard
-                  key={part.id}
-                  part={part}
-                  selected={activePart.id === part.id}
-                  onSelect={() => setActivePart(part)}
-                />
-              ))}
-              {filteredParts.length === 0 && (
-                <div className="col-span-3 text-center py-10 text-zinc-400">
-                  <Search size={24} className="mx-auto mb-2 opacity-40" />
-                  <p className="text-xs font-medium">Parça bulunamadı</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Selected Part Info */}
-          {activePart && (
-            <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-lg shadow-sm"
-                  style={{ backgroundColor: activeColor + "33", border: `2px solid ${activeColor}` }}
-                >
-                  {activePart.icon}
+          {/* Part list */}
+          <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+            {filteredDefs.map(def=>(
+              <button key={def.id} onClick={()=>{ setActiveDef(def); setTool("place"); }}
+                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all ${
+                  activeDef.id===def.id && tool==="place"
+                    ? "bg-lego-red/20 border-2 border-lego-red text-white"
+                    : "border-2 border-transparent bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300"
+                }`}>
+                {/* Mini preview */}
+                <div className="w-10 h-10 flex items-center justify-center flex-shrink-0 bg-zinc-900 rounded-lg overflow-hidden">
+                  <BrickSVG
+                    partId={def.id}
+                    w={Math.min(def.defaultW,2)}
+                    h={Math.min(def.defaultH,2)}
+                    color={def.color}
+                    selected={false}
+                  />
                 </div>
                 <div>
-                  <p className="text-xs font-black">{activePart.name}</p>
-                  <p className="text-[10px] text-zinc-400">{activePart.w}×{activePart.h} · {activePart.category}</p>
+                  <div className="text-sm font-bold leading-tight">{def.name}</div>
+                  <div className="text-[10px] text-zinc-500">{def.defaultW}×{def.defaultH} stud</div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Active part info */}
+          {tool==="place" && (
+            <div className="p-3 border-t border-zinc-800 bg-zinc-900">
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Yerleştirilecek</div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg" style={{backgroundColor:activeColor, border:`2px solid ${darken(activeColor,30)}`}}/>
+                <div>
+                  <div className="text-xs font-bold">{activeDef.name}</div>
+                  <div className="text-[10px] text-zinc-400">{activeDef.defaultW}×{activeDef.defaultH}</div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* ── CENTER: Workspace ── */}
-        <div className="flex-1 overflow-auto bg-zinc-300 dark:bg-zinc-800 relative" id="lego-workspace">
-          {/* LEGO Baseplate */}
+        {/* ══ CENTER: Workspace ══ */}
+        <div className="flex-1 overflow-auto bg-zinc-700 relative"
+          style={{cursor: tool==="place" ? "crosshair" : "default"}}>
           <div
+            ref={workspaceRef}
             style={{
+              width: GRID_W*CELL,
+              height: GRID_H*CELL,
               transform: `scale(${zoom})`,
               transformOrigin: "top left",
-              width: GRID_COLS * CELL_PX,
-              height: GRID_ROWS * CELL_PX,
               position: "relative",
-              cursor: "crosshair",
+              flexShrink: 0,
             }}
-            ref={gridRef}
-            onClick={handleGridClick}
+            onClick={onWorkspaceClick}
+            onMouseMove={onWorkspaceMouseMove}
+            onMouseLeave={onWorkspaceMouseLeave}
+            onMouseUp={onWorkspaceMouseUp}
           >
-            {/* Baseplate background */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                backgroundColor: "#2B7A3D",
-                backgroundImage: `
-                  radial-gradient(circle at ${CELL_PX / 2}px ${CELL_PX / 2}px, rgba(255,255,255,0.18) 30%, transparent 32%),
-                  linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px)
-                `,
-                backgroundSize: `${CELL_PX}px ${CELL_PX}px`,
-                boxShadow: "inset 0 0 30px rgba(0,0,0,0.25)",
-              }}
-            />
+            {/* ── Baseplate ── */}
+            <div style={{
+              position:"absolute", inset:0,
+              backgroundColor:"#2B6E3A",
+              backgroundImage:`
+                radial-gradient(circle at ${CELL*0.5}px ${CELL*0.5}px, rgba(255,255,255,0.20) 28%, transparent 30%),
+                linear-gradient(rgba(0,0,0,0.10) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.10) 1px, transparent 1px)
+              `,
+              backgroundSize:`${CELL}px ${CELL}px`,
+              boxShadow:"inset 0 0 60px rgba(0,0,0,0.4)",
+            }}/>
 
-            {/* Stud dots overlay */}
-            <svg
-              style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-              width={GRID_COLS * CELL_PX}
-              height={GRID_ROWS * CELL_PX}
-            >
-              {Array.from({ length: GRID_ROWS }).map((_, row) =>
-                Array.from({ length: GRID_COLS }).map((_, col) => (
-                  <g key={`${row}-${col}`}>
-                    <ellipse
-                      cx={col * CELL_PX + CELL_PX / 2}
-                      cy={row * CELL_PX + CELL_PX / 2}
-                      rx={CELL_PX * 0.28}
-                      ry={CELL_PX * 0.17}
-                      fill="rgba(255,255,255,0.22)"
-                    />
-                    <ellipse
-                      cx={col * CELL_PX + CELL_PX / 2 - 1}
-                      cy={row * CELL_PX + CELL_PX / 2 - 1}
-                      rx={CELL_PX * 0.15}
-                      ry={CELL_PX * 0.09}
-                      fill="rgba(255,255,255,0.35)"
-                    />
-                  </g>
-                ))
-              )}
+            {/* ── Grid lines (coordinates every 8) ── */}
+            <svg style={{position:"absolute",inset:0,pointerEvents:"none"}} width={GRID_W*CELL} height={GRID_H*CELL}>
+              {Array.from({length:Math.floor(GRID_W/8)+1}).map((_,i)=>(
+                <g key={i}>
+                  <line x1={i*8*CELL} y1={0} x2={i*8*CELL} y2={GRID_H*CELL} stroke="rgba(255,255,255,0.12)" strokeWidth={1}/>
+                  <text x={i*8*CELL+3} y={12} fill="rgba(255,255,255,0.3)" fontSize={9} fontFamily="monospace">{i*8}</text>
+                </g>
+              ))}
+              {Array.from({length:Math.floor(GRID_H/8)+1}).map((_,i)=>(
+                <g key={i}>
+                  <line x1={0} y1={i*8*CELL} x2={GRID_W*CELL} y2={i*8*CELL} stroke="rgba(255,255,255,0.12)" strokeWidth={1}/>
+                  {i>0 && <text x={3} y={i*8*CELL+11} fill="rgba(255,255,255,0.3)" fontSize={9} fontFamily="monospace">{i*8}</text>}
+                </g>
+              ))}
             </svg>
 
-            {/* Placed bricks */}
-            {sortedPlaced.map((brick) => {
-              const part = PARTS.find((p) => p.id === brick.partId);
-              if (!part) return null;
-              const isRotated = brick.rotation === 90 || brick.rotation === 270;
-              const dispW = isRotated ? part.h : part.w;
-              const dispH = isRotated ? part.w : part.h;
-              const elevPx = brick.layer * 3;
+            {/* ── Ghost preview ── */}
+            {tool==="place" && ghost && (
+              <div style={{
+                position:"absolute",
+                left: Math.min(ghost.x, GRID_W-ghostW)*CELL,
+                top: Math.min(ghost.y, GRID_H-ghostH)*CELL,
+                width: ghostW*CELL, height: ghostH*CELL,
+                opacity:0.5, pointerEvents:"none", zIndex:999,
+              }}>
+                <BrickSVG partId={activeDef.id} w={ghostW} h={ghostH} color={activeColor} selected={false}/>
+              </div>
+            )}
+
+            {/* ── Placed Bricks ── */}
+            {sorted.map(b=>{
+              const dispW = b.rotation%180===0 ? b.w : b.h;
+              const dispH = b.rotation%180===0 ? b.h : b.w;
               return (
-                <div
-                  key={brick.uid}
+                <div key={b.uid}
                   style={{
-                    position: "absolute",
-                    left: brick.x * CELL_PX,
-                    top: brick.y * CELL_PX - elevPx,
-                    width: dispW * CELL_PX,
-                    height: dispH * CELL_PX,
-                    zIndex: brick.layer * 10 + (selectedUid === brick.uid ? 999 : 0),
-                    transform: `rotate(${brick.rotation}deg)`,
-                    transformOrigin: "center center",
-                    cursor: "pointer",
+                    position:"absolute",
+                    left: b.x*CELL, top: b.y*CELL,
+                    width: dispW*CELL, height: dispH*CELL,
+                    zIndex: b.layer*10 + (selectedId===b.uid ? 1000 : 0),
+                    cursor: tool==="move" ? "grab" : "pointer",
+                    transform: `translateY(${-b.layer*2}px)`,
                   }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedUid(brick.uid === selectedUid ? null : brick.uid);
-                  }}
+                  onMouseDown={e=>onBrickMouseDown(e,b)}
+                  onClick={e=>{e.stopPropagation(); setSelectedId(b.uid);}}
                 >
                   <BrickSVG
-                    part={{ ...part, w: dispW, h: dispH }}
-                    color={brick.color}
-                    cellPx={CELL_PX}
-                    selected={selectedUid === brick.uid}
+                    partId={b.partId}
+                    w={dispW} h={dispH}
+                    color={b.color}
+                    selected={selectedId===b.uid}
                   />
                 </div>
               );
@@ -705,117 +585,134 @@ export default function LegoDesigner() {
           </div>
         </div>
 
-        {/* ── RIGHT PANEL: Properties ── */}
-        <div className="w-56 flex-shrink-0 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 flex flex-col">
-          <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
-            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-1.5">
-              <Palette size={12} /> Renk Seçici
-            </h3>
-            <div className="grid grid-cols-4 gap-1.5">
-              {LEGO_COLORS.map((c) => (
-                <button
-                  key={c.hex}
-                  onClick={() => {
-                    setActiveColor(c.hex);
-                    if (selectedUid) changeSelectedColor(c.hex);
-                  }}
-                  title={c.name}
-                  className={`w-full aspect-square rounded-lg border-2 transition-all hover:scale-110 shadow-sm ${
-                    activeColor === c.hex ? "border-zinc-800 dark:border-white scale-110 shadow-md" : "border-transparent"
-                  }`}
-                  style={{ backgroundColor: c.hex }}
-                />
-              ))}
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md border border-zinc-200 shadow-sm" style={{ backgroundColor: activeColor }} />
-              <span className="text-xs font-mono text-zinc-500">{activeColor}</span>
-            </div>
-          </div>
+        {/* ══ RIGHT: Properties ══ */}
+        <div className="w-56 flex-shrink-0 bg-zinc-950 border-l border-zinc-800 flex flex-col overflow-y-auto">
 
-          {/* Selected brick controls */}
-          <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
-            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-1.5">
-              <Wrench size={12} /> Araçlar
-            </h3>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={rotateSelected}
-                disabled={!selectedUid}
-                className="flex items-center gap-2 w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-sm font-bold disabled:opacity-40 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-              >
-                <RotateCw size={15} /> Döndür (R)
-              </button>
-              <button
-                onClick={deleteSelected}
-                disabled={!selectedUid}
-                className="flex items-center gap-2 w-full px-3 py-2 bg-red-50 dark:bg-red-900/20 text-lego-red rounded-xl text-sm font-bold disabled:opacity-40 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-              >
-                <Trash2 size={15} /> Sil (Del)
-              </button>
-            </div>
-          </div>
-
-          {/* Selection info */}
-          <div className="p-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-1.5">
-              <Layers size={12} /> Seçili Parça
-            </h3>
-            {selectedBrick && selectedPart ? (
-              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="w-8 h-8 rounded-lg shadow-sm flex-shrink-0"
-                    style={{ backgroundColor: selectedBrick.color, border: `2px solid ${darken(selectedBrick.color, 30)}` }}
-                  />
+          {/* Selected piece controls */}
+          {selectedBrick && selectedDef ? (
+            <>
+              <div className="p-4 border-b border-zinc-800">
+                <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-3">Seçili Parça</div>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-800 flex-shrink-0">
+                    <BrickSVG partId={selectedBrick.partId} w={Math.min(selectedBrick.w,2)} h={Math.min(selectedBrick.h,2)} color={selectedBrick.color} selected={false}/>
+                  </div>
                   <div>
-                    <p className="text-xs font-bold leading-tight">{selectedPart.name}</p>
-                    <p className="text-[10px] text-zinc-400">{selectedPart.category}</p>
+                    <div className="text-sm font-bold">{selectedDef.name}</div>
+                    <div className="text-[10px] text-zinc-400">{selectedDef.category}</div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-1 text-[10px] font-bold text-zinc-500">
-                  <span>Konum: {selectedBrick.x},{selectedBrick.y}</span>
-                  <span>Katman: {selectedBrick.layer}</span>
-                  <span>Döndürme: {selectedBrick.rotation}°</span>
-                  <span>Boyut: {selectedPart.w}×{selectedPart.h}</span>
+
+                {/* Width control */}
+                <div className="mb-3">
+                  <div className="text-[10px] font-bold text-zinc-400 mb-1.5 flex justify-between">
+                    <span>GENİŞLİK</span>
+                    <span className="text-white font-black">{selectedBrick.w} stud</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>changeW(-1)} disabled={selectedBrick.w<=selectedDef.minW}
+                      className="w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center disabled:opacity-30 transition-colors font-bold">
+                      <Minus size={14}/>
+                    </button>
+                    <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-lego-red rounded-full transition-all"
+                        style={{width:`${((selectedBrick.w-selectedDef.minW)/(selectedDef.maxW-selectedDef.minW))*100}%`}}/>
+                    </div>
+                    <button onClick={()=>changeW(+1)} disabled={selectedBrick.w>=selectedDef.maxW}
+                      className="w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center disabled:opacity-30 transition-colors font-bold">
+                      <Plus size={14}/>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Height control */}
+                <div className="mb-4">
+                  <div className="text-[10px] font-bold text-zinc-400 mb-1.5 flex justify-between">
+                    <span>DERİNLİK</span>
+                    <span className="text-white font-black">{selectedBrick.h} stud</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>changeH(-1)} disabled={selectedBrick.h<=selectedDef.minH}
+                      className="w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center disabled:opacity-30 transition-colors font-bold">
+                      <Minus size={14}/>
+                    </button>
+                    <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{width:`${((selectedBrick.h-selectedDef.minH)/(selectedDef.maxH-selectedDef.minH))*100}%`}}/>
+                    </div>
+                    <button onClick={()=>changeH(+1)} disabled={selectedBrick.h>=selectedDef.maxH}
+                      className="w-8 h-8 bg-zinc-800 hover:bg-zinc-700 rounded-lg flex items-center justify-center disabled:opacity-30 transition-colors font-bold">
+                      <Plus size={14}/>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2">
+                  <button onClick={rotateSelected}
+                    className="flex items-center gap-2 w-full px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-bold transition-colors">
+                    <RotateCw size={14}/> Döndür (R)
+                  </button>
+                  <button onClick={deleteSelected}
+                    className="flex items-center gap-2 w-full px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-xl text-sm font-bold transition-colors">
+                    <Trash2 size={14}/> Sil (Del)
+                  </button>
+                </div>
+
+                {/* Info */}
+                <div className="mt-4 grid grid-cols-2 gap-1.5 text-[10px]">
+                  <div className="bg-zinc-900 rounded-lg p-2 text-center">
+                    <div className="text-zinc-500 font-bold">Konum</div>
+                    <div className="font-black text-zinc-200">{selectedBrick.x},{selectedBrick.y}</div>
+                  </div>
+                  <div className="bg-zinc-900 rounded-lg p-2 text-center">
+                    <div className="text-zinc-500 font-bold">Katman</div>
+                    <div className="font-black text-zinc-200">{selectedBrick.layer}</div>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center text-zinc-400 py-4">
-                <div className="text-3xl mb-1">👆</div>
-                <p className="text-[11px]">Düzenlemek için bir parçaya tıkla</p>
-              </div>
-            )}
+            </>
+          ) : (
+            <div className="p-4 border-b border-zinc-800 text-center text-zinc-600">
+              <div className="text-4xl mb-2 mt-4">👆</div>
+              <p className="text-xs font-medium">Bir parçaya tıklayarak özelliklerini düzenle</p>
+            </div>
+          )}
+
+          {/* Color Picker */}
+          <div className="p-4">
+            <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-3">Renk</div>
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
+              {LEGO_COLORS.map(hex=>(
+                <button key={hex} onClick={()=>changeColor(hex)} title={hex}
+                  className={`aspect-square rounded-lg border-2 transition-all hover:scale-110 ${
+                    activeColor===hex ? "border-white scale-110 shadow-lg" : "border-transparent"
+                  }`}
+                  style={{backgroundColor:hex}}/>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 bg-zinc-900 rounded-lg p-2">
+              <div className="w-5 h-5 rounded-md flex-shrink-0" style={{backgroundColor:activeColor, border:`1px solid ${darken(activeColor,30)}`}}/>
+              <span className="text-xs font-mono text-zinc-400">{activeColor.toUpperCase()}</span>
+            </div>
           </div>
 
           {/* Stats */}
-          <div className="mt-auto p-4 border-t border-zinc-200 dark:border-zinc-800">
-            <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-1.5">
-              <Grid3X3 size={12} /> İstatistikler
-            </h3>
+          <div className="mt-auto p-4 border-t border-zinc-800">
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-2 text-center">
-                <p className="text-lg font-black text-lego-red">{placed.length}</p>
-                <p className="text-[10px] text-zinc-500 font-bold">Parça</p>
+              <div className="bg-zinc-900 rounded-xl p-3 text-center">
+                <div className="text-xl font-black text-lego-red">{bricks.length}</div>
+                <div className="text-[10px] text-zinc-500 font-bold">Parça</div>
               </div>
-              <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-2 text-center">
-                <p className="text-lg font-black text-lego-blue">
-                  {Math.max(0, ...placed.map((b) => b.layer)) + (placed.length ? 1 : 0)}
-                </p>
-                <p className="text-[10px] text-zinc-500 font-bold">Katman</p>
+              <div className="bg-zinc-900 rounded-xl p-3 text-center">
+                <div className="text-xl font-black text-blue-400">
+                  {bricks.length ? Math.max(...bricks.map(b=>b.layer))+1 : 0}
+                </div>
+                <div className="text-[10px] text-zinc-500 font-bold">Katman</div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* ── Keyboard shortcuts hint ── */}
-      <div className="px-6 py-2 bg-zinc-100 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-6 text-[11px] text-zinc-500 font-medium">
-        <span>💡 <strong>Tıkla</strong>: Parça ekle</span>
-        <span>· <strong>R</strong>: Döndür</span>
-        <span>· <strong>Del</strong>: Sil</span>
-        <span>· <strong>Esc</strong>: Seçimi kaldır</span>
-        <span>· <kbd className="px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800">Kaydır</kbd>: Zemin gez</span>
       </div>
     </div>
   );
