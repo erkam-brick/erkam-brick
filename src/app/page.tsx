@@ -5,12 +5,14 @@ import Image from "next/image";
 import { ArrowDown, Menu, X, ExternalLink, Github, Instagram, Twitter, Search, Heart, Shield, Clock, Cuboid, Play, Download, MessageSquare, User, LogOut, Trophy } from "lucide-react";
 import { useState, useMemo } from "react";
 import { PROJECTS, CATEGORIES, POWERED_UP_MOTORS } from "../data/projects";
+import youtubeVideosData from "../data/youtube_videos.json";
 import ProjectModal from "../components/ProjectModal";
 import LegoGame from "../components/LegoGame";
 import LegoBuilder from "../components/LegoBuilder";
 import LegoPuzzle from "../components/LegoPuzzle";
 import LegoBattle from "../components/LegoBattle";
 import SurpriseBox from "../components/SurpriseBox";
+import LegoDesigner from "../components/LegoDesigner";
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -39,6 +41,8 @@ export default function Home() {
 
   // Game State
   const [activeGame, setActiveGame] = useState<"builder" | "puzzle" | "battle" | "drop">("builder");
+  // Video Tab State
+  const [videoTab, setVideoTab] = useState<"all" | "shorts">("all");
   const [communityBuilds, setCommunityBuilds] = useState<Array<{id: number, name: string, author: string, likes: number, category: string, color: string, imageUrl?: string}>>([
     { id: 1, name: "Modern Villa", author: "LegoMaster_99", likes: 124, category: "Şehir", color: "bg-lego-blue" },
     { id: 2, name: "Hızlı Yarışçı", author: "BrickBuilder", likes: 89, category: "Technic", color: "bg-lego-red" },
@@ -64,28 +68,89 @@ export default function Home() {
   const isTechnicActive = activeCategory === "Technic";
   const isCityActive = activeCategory === "Şehir";
   const isAllActive = activeCategory === "Tümü";
+  const isYTVideosActive = activeCategory === "YT Videolar";
+  const isYTShortsActive = activeCategory === "YT Shorts";
 
-  const allVideos = useMemo(() => [
-    { id: 'v1', category: 'Technic', ytId: 'BDMHLyiJV2Q', title: 'LEGO Technic Yapım Videosu', desc: '' },
-    { id: 'v2', category: 'Technic', ytId: '4SjliMMeQrU', title: 'LEGO Technic Yapım Videosu 2', desc: '' },
-    { id: 'v3', category: 'Technic', ytId: 'XifPz19k2WU', title: 'LEGO Technic Yapım Videosu 3', desc: '' },
-    { id: 'v4', category: 'Technic-City', ytId: 'HTO5Vivy2GU', title: 'LEGO Technic-City Yapım Videosu', desc: '' },
-    { id: 'v5', category: 'Technic-City', ytId: 'whb44aYbLFI', title: 'LEGO Technic-City Yapım Videosu 2', desc: '' },
-    { id: 'v6', category: 'Şehir', ytId: '_hsjRHSKTiM', title: 'LEGO Şehir Kurma Videosu', desc: 'LEGO Şehir parçalarıyla yapı inşa süreci.' },
-    { id: 'v7', category: 'Powered UP', ytId: '_kQbTovns-I', title: 'LEGO Powered UP Uygulama Videosu', desc: 'Motorların ve mekanizmaların çalışması.' },
-  ], []);
+  const allVideos = useMemo(() => {
+    // Start with the dynamically fetched channel videos (from JSON)
+    const fetched = youtubeVideosData.map(v => ({
+      id: v.id,
+      ytId: v.ytId,
+      title: v.title,
+      category: v.category,
+      formattedDate: v.formattedDate,
+      thumbnailUrl: v.thumbnailUrl,
+      watchUrl: v.watchUrl,
+      isShort: (v as any).isShort === true || v.title.toLowerCase().includes('#shorts') || v.title.toLowerCase().includes('#short'),
+      desc: ""
+    }));
 
-  const filteredVideos = useMemo(() => {
-    return allVideos.filter(v => {
-      const matchesSearch = v.title.toLowerCase().includes(searchQuery.toLowerCase()) || v.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = isAllActive || v.category === activeCategory;
-      return matchesSearch && matchesCategory;
+    // Local hardcoded fallback videos
+    const local: Array<{
+      id: string;
+      category: string;
+      ytId: string;
+      title: string;
+      desc: string;
+      formattedDate?: string;
+      thumbnailUrl?: string;
+      watchUrl?: string;
+    }> = [
+      { id: 'v1', category: 'Technic', ytId: 'BDMHLyiJV2Q', title: 'LEGO Technic Yapım Videosu', desc: '', formattedDate: '27.11.2025', watchUrl: 'https://www.youtube.com/watch?v=BDMHLyiJV2Q' },
+      { id: 'v2', category: 'Technic', ytId: '4SjliMMeQrU', title: 'LEGO Technic Yapım Videosu 2', desc: '' },
+      { id: 'v3', category: 'Technic', ytId: 'XifPz19k2WU', title: 'LEGO Technic Yapım Videosu 3', desc: '' },
+      { id: 'v4', category: 'Technic-City', ytId: 'HTO5Vivy2GU', title: 'LEGO Technic-City Yapım Videosu', desc: '', formattedDate: '12.10.2025', watchUrl: 'https://www.youtube.com/watch?v=HTO5Vivy2GU' },
+      { id: 'v5', category: 'Technic-City', ytId: 'whb44aYbLFI', title: 'LEGO Technic-City Yapım Videosu 2', desc: '' },
+      { id: 'v6', category: 'Şehir', ytId: '_hsjRHSKTiM', title: 'LEGO Şehir Kurma Videosu', desc: 'LEGO Şehir parçalarıyla yapı inşa süreci.' },
+      { id: 'v7', category: 'Powered UP', ytId: '_kQbTovns-I', title: 'LEGO Powered UP Uygulama Videosu', desc: 'Motorların ve mekanizmaların çalışması.' },
+    ];
+
+    const seen = new Set();
+    const combined: typeof fetched = [];
+
+    // Fetched videos go first (they are already sorted newest-first in the JSON)
+    fetched.forEach(v => {
+      combined.push(v);
+      seen.add(v.ytId);
     });
-  }, [searchQuery, activeCategory, isAllActive, allVideos]);
+
+    // Local/mock videos go next if not already present
+    local.forEach(v => {
+      if (!seen.has(v.ytId)) {
+        combined.push({
+          id: v.id,
+          ytId: v.ytId,
+          title: v.title,
+          category: v.category,
+          formattedDate: v.formattedDate || '',
+          thumbnailUrl: v.thumbnailUrl || `https://img.youtube.com/vi/${v.ytId}/hqdefault.jpg`,
+          watchUrl: v.watchUrl || `https://www.youtube.com/watch?v=${v.ytId}`,
+          isShort: false,
+          desc: v.desc || ''
+        });
+        seen.add(v.ytId);
+      }
+    });
+
+    return combined;
+  }, []);
+
+
+  const shortsVideos = useMemo(() => {
+    return allVideos.filter(v => v.isShort && (
+      v.title.toLowerCase().includes(searchQuery.toLowerCase()) || v.category.toLowerCase().includes(searchQuery.toLowerCase())
+    ) && (isAllActive || isYTShortsActive || (!isYTVideosActive && v.category === activeCategory)));
+  }, [searchQuery, activeCategory, isAllActive, isYTShortsActive, isYTVideosActive, allVideos]);
+
+  const regularVideos = useMemo(() => {
+    return allVideos.filter(v => !v.isShort && (
+      v.title.toLowerCase().includes(searchQuery.toLowerCase()) || v.category.toLowerCase().includes(searchQuery.toLowerCase())
+    ) && (isAllActive || isYTVideosActive || (!isYTShortsActive && v.category === activeCategory)));
+  }, [searchQuery, activeCategory, isAllActive, isYTVideosActive, isYTShortsActive, allVideos]);
 
   // Filter projects based on search and category
   const filteredProjects = useMemo(() => {
-    if (isPoweredUpActive || isTechnicActive || isTechnicCityActive || isCityActive) return [];
+    if (isPoweredUpActive || isTechnicActive || isTechnicCityActive || isCityActive || isYTVideosActive || isYTShortsActive) return [];
     return PROJECTS.filter(project => {
       const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             project.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -172,6 +237,7 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-8 font-medium">
             <a href="#gallery" className="hover:text-lego-blue transition-colors">Galeri</a>
             <a href="#knowledge" className="hover:text-lego-red transition-colors">Bilgi Köşesi</a>
+            <a href="#designer" className="hover:text-lego-yellow px-3 py-1 bg-lego-yellow/10 rounded-full transition-colors font-bold">Tasarla 🧱</a>
             <a href="#games" className="hover:text-lego-purple px-3 py-1 bg-lego-red/10 rounded-full transition-colors animate-pulse">Oyunlar 🎮</a>
             <a href="#about" className="hover:text-lego-yellow transition-colors">Hakkımda</a>
             <a href="#contact" className="hover:text-lego-green transition-colors">İletişim</a>
@@ -227,6 +293,7 @@ export default function Home() {
             )}
             <a href="#gallery" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-blue">Galeri</a>
             <a href="#knowledge" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-red">Bilgi Köşesi</a>
+            <a href="#designer" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-yellow flex items-center gap-2">Tasarla 🧱</a>
             <a href="#games" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-red flex items-center gap-2">Oyunlar <span className="text-sm bg-lego-red text-white px-2 py-0.5 rounded-full">Yeni</span></a>
             <a href="#about" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-yellow">Hakkımda</a>
             <a href="#contact" onClick={() => setIsMenuOpen(false)} className="hover:text-lego-green">İletişim</a>
@@ -345,10 +412,10 @@ export default function Home() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                <div>
                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex items-center gap-3">
-                      {isPoweredUpActive ? "⚡ Powered UP Koleksiyonu" : isTechnicActive ? "🔧 Technic Videoları" : isTechnicCityActive ? "🏙️ Technic-City Videoları" : isCityActive ? "🏙️ Şehir Videoları" : "Başyapıt Galerisi"}
-                      <span className="text-xl text-zinc-400 font-medium bg-zinc-200/50 dark:bg-zinc-800/50 px-3 py-1 rounded-full">{isPoweredUpActive ? `${filteredMotors.length} Bileşen` : isTechnicActive || isTechnicCityActive || isCityActive ? `${filteredVideos.length} Video` : `${filteredProjects.length + filteredVideos.length + filteredMotors.length} Eser`}</span>
+                      {isPoweredUpActive ? "⚡ Powered UP Koleksiyonu" : isYTVideosActive ? "▶️ YT Videolar" : isYTShortsActive ? "⚡ YT Shorts" : isTechnicActive ? "🔧 Technic Videoları" : isTechnicCityActive ? "🏙️ Technic-City Videoları" : isCityActive ? "🏙️ Şehir Videoları" : "Başyapıt Galerisi"}
+                      <span className="text-xl text-zinc-400 font-medium bg-zinc-200/50 dark:bg-zinc-800/50 px-3 py-1 rounded-full">{isPoweredUpActive ? `${filteredMotors.length} Bileşen` : isYTVideosActive ? `${regularVideos.length} Video` : isYTShortsActive ? `${shortsVideos.length} Short` : isTechnicActive || isTechnicCityActive || isCityActive ? `${regularVideos.length + shortsVideos.length} Video` : `${filteredProjects.length + regularVideos.length + shortsVideos.length + filteredMotors.length} Eser`}</span>
                    </h2>
-                   <p className="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl">{isPoweredUpActive ? "Yapılarına hareket kazandıran güç kaynakları. Koleksiyonumda bulunan ve projelerimde aktif olarak kullandığım Powered UP serim." : isTechnicActive ? "LEGO Technic yapılarımın video kayıtları ve yapım süreçleri." : isTechnicCityActive ? "Çalışmalarım çeşitli topluluk sergilerinde yer aldı ve sık sık küresel yapım yarışmalarına katılıyorum. İnşa etmediğim zamanlarda parça ayıklıyorum. Her zaman. Parça. Ayıklıyorum." : isCityActive ? "LEGO Şehir kurma temalı yapımlarımın videoları." : "En karmaşık ve yaratıcı yapılarımın özenle seçilmiş bir koleksiyonu."}</p>
+                   <p className="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl">{isPoweredUpActive ? "Yapılarına hareket kazandıran güç kaynakları. Koleksiyonumda bulunan ve projelerimde aktif olarak kullandığım Powered UP serim." : isYTVideosActive ? "Kanalımdaki tüm normal YouTube videolarım. Yeni video yüklediğimde otomatik olarak güncellenir." : isYTShortsActive ? "Kanalımdaki tüm YouTube Shorts videolarım. Kısa ve öz içerikler." : isTechnicActive ? "LEGO Technic yapılarımın video kayıtları ve yapım süreçleri." : isTechnicCityActive ? "Çalışmalarım çeşitli topluluk sergilerinde yer aldı ve sık sık küresel yapım yarışmalarına katılıyorum. İnşa etmediğim zamanlarda parça ayıklıyorum. Her zaman. Parça. Ayıklıyorum." : isCityActive ? "LEGO Şehir kurma temalı yapımlarımın videoları." : "En karmaşık ve yaratıcı yapılarımın özenle seçilmiş bir koleksiyonu."}</p>
                </div>
                
                {/* Search Bar */}
@@ -384,7 +451,7 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {filteredProjects.length === 0 && filteredVideos.length === 0 && filteredMotors.length === 0 ? (
+          {filteredProjects.length === 0 && regularVideos.length === 0 && shortsVideos.length === 0 && filteredMotors.length === 0 ? (
              <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
                 <Cuboid size={48} className="mx-auto text-zinc-300 mb-4" />
                 <h3 className="text-xl font-bold mb-2">İçerik Bulunamadı</h3>
@@ -460,39 +527,173 @@ export default function Home() {
                  </div>
                )}
 
-               {/* Video Grid */}
-               {filteredVideos.length > 0 && (
-                 <div>
-                   {isAllActive && <h3 className="text-2xl font-bold mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-2">Videolar</h3>}
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                     {filteredVideos.map((video, index) => (
-                       <motion.div
-                         key={video.id}
-                         initial={{ opacity: 0, y: 30 }}
-                         whileInView={{ opacity: 1, y: 0 }}
-                         viewport={{ once: true }}
-                         transition={{ duration: 0.5, delay: index * 0.1 }}
-                         className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all"
-                       >
-                         <div className="aspect-video w-full">
-                           <iframe
-                             src={`https://www.youtube.com/embed/${video.ytId}`}
-                             title={video.title}
-                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                             allowFullScreen
-                             className="w-full h-full"
-                           />
-                         </div>
-                         <div className="p-6">
-                           <span className="text-xs font-bold tracking-wider uppercase text-lego-red mb-2 block">{video.category}</span>
-                           <h3 className="text-xl font-bold mb-2">{video.title}</h3>
-                           {video.desc && <p className="text-zinc-600 dark:text-zinc-400 text-sm">{video.desc}</p>}
-                         </div>
-                       </motion.div>
-                     ))}
-                   </div>
-                 </div>
-               )}
+                {/* Video Grid */}
+                {(regularVideos.length > 0 || shortsVideos.length > 0) && (
+                  <div>
+                    {isAllActive && (
+                      <div className="flex items-center justify-between mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                        <h3 className="text-2xl font-bold">Videolar</h3>
+                        {/* Video Tab Switcher */}
+                        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-full">
+                          <button
+                            onClick={() => setVideoTab("all")}
+                            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+                              videoTab === "all"
+                                ? "bg-lego-red text-white shadow-md"
+                                : "text-zinc-500 hover:text-foreground"
+                            }`}
+                          >
+                            <Play size={13} fill="currentColor" />
+                            Tümü
+                            <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">{regularVideos.length}</span>
+                          </button>
+                          <button
+                            onClick={() => setVideoTab("shorts")}
+                            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+                              videoTab === "shorts"
+                                ? "bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-md"
+                                : "text-zinc-500 hover:text-foreground"
+                            }`}
+                          >
+                            ⚡ Kısa Videolar
+                            <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full">{shortsVideos.length}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Regular Videos */}
+                    {(videoTab === "all" || !isAllActive) && regularVideos.length > 0 && (
+                      <div className={isAllActive && videoTab === "shorts" ? "hidden" : ""}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                          {regularVideos.map((video, index) => (
+                            <motion.div
+                              key={video.id}
+                              initial={{ opacity: 0, y: 30 }}
+                              whileInView={{ opacity: 1, y: 0 }}
+                              viewport={{ once: true }}
+                              transition={{ duration: 0.5, delay: index * 0.05 }}
+                              className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all flex flex-col h-full"
+                            >
+                              <div className="aspect-video relative overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                                <img
+                                  src={video.thumbnailUrl}
+                                  alt={video.title}
+                                  className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                  <div className="w-14 h-14 rounded-full bg-lego-red/90 text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-all duration-300">
+                                    <Play size={24} fill="currentColor" className="ml-1" />
+                                  </div>
+                                </div>
+                                <div className="absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-xs font-bold text-white bg-lego-red shadow-md">
+                                  {video.category}
+                                </div>
+                              </div>
+                              <div className="p-6 flex flex-col flex-grow">
+                                <div className="flex items-center justify-between mb-3 text-xs font-bold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
+                                  <span>YOUTUBE VİDEOSU</span>
+                                  {video.formattedDate && (
+                                    <span className="flex items-center gap-1">
+                                      <Clock size={12} />
+                                      {video.formattedDate}
+                                    </span>
+                                  )}
+                                </div>
+                                <h3 className="text-lg font-bold mb-3 line-clamp-2 group-hover:text-lego-blue transition-colors flex-grow">
+                                  {video.title}
+                                </h3>
+                                {video.desc && (
+                                  <p className="text-zinc-600 dark:text-zinc-400 text-sm line-clamp-2 mb-4">
+                                    {video.desc}
+                                  </p>
+                                )}
+                                <a
+                                  href={video.watchUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-auto w-full py-3 px-4 bg-lego-red hover:bg-red-700 text-white rounded-full font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group/btn"
+                                >
+                                  <span>YouTube&apos;da İzle</span>
+                                  <ExternalLink size={16} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                                </a>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Shorts Videos */}
+                    {(videoTab === "shorts" && isAllActive || isYTShortsActive || !isAllActive) && shortsVideos.length > 0 && (
+                      <div className={isAllActive && videoTab === "all" ? "hidden" : ""}>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                          {shortsVideos.map((video, index) => (
+                            <motion.div
+                              key={video.id}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              whileInView={{ opacity: 1, scale: 1 }}
+                              viewport={{ once: true }}
+                              transition={{ duration: 0.4, delay: index * 0.06 }}
+                              className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all cursor-pointer"
+                            >
+                              <a
+                                href={video.watchUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block"
+                              >
+                                {/* 9:16 aspect ratio thumbnail */}
+                                <div className="relative" style={{ paddingBottom: "177.78%" }}>
+                                  <img
+                                    src={video.thumbnailUrl}
+                                    alt={video.title}
+                                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
+                                  {/* Gradient overlay */}
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                                  {/* Shorts badge */}
+                                  <div className="absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black text-white bg-gradient-to-r from-fuchsia-600 to-purple-600 shadow-md">
+                                    ⚡ SHORT
+                                  </div>
+                                  {/* Category badge */}
+                                  <div className="absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-lego-red shadow-md">
+                                    {video.category}
+                                  </div>
+                                  {/* Play button */}
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <div className="w-12 h-12 rounded-full bg-white/90 text-black flex items-center justify-center shadow-lg transform scale-75 group-hover:scale-100 transition-all duration-300">
+                                      <Play size={20} fill="currentColor" className="ml-0.5" />
+                                    </div>
+                                  </div>
+                                  {/* Title + date at bottom */}
+                                  <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                                    <p className="text-white text-xs font-bold line-clamp-2 leading-snug mb-1">{video.title}</p>
+                                    {video.formattedDate && (
+                                      <p className="text-white/60 text-[10px] flex items-center gap-0.5">
+                                        <Clock size={9} />
+                                        {video.formattedDate}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </a>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Empty state if no videos in selected tab */}
+                    {isAllActive && videoTab === "shorts" && shortsVideos.length === 0 && (
+                      <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                        <span className="text-5xl block mb-4">⚡</span>
+                        <h3 className="text-xl font-bold mb-2">Kısa Video Bulunamadı</h3>
+                        <p className="text-zinc-500">Bu kategoride henüz kısa video yok.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                {/* Powered UP Motors Grid */}
                {filteredMotors.length > 0 && (
@@ -544,6 +745,35 @@ export default function Home() {
       </section>
 
 
+
+      {/* LEGO Designer Section */}
+      <section id="designer" className="py-0 bg-white dark:bg-zinc-950">
+        <div className="max-w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center py-16 px-6"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lego-yellow/10 border border-lego-yellow/30 text-sm font-bold text-amber-700 dark:text-lego-yellow mb-6">
+              🧱 YENİ ÖZELLİK
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-4">
+              LEGO{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-lego-yellow via-lego-red to-lego-blue">
+                Tasarımcı
+              </span>
+            </h2>
+            <p className="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
+              Gerçek LEGO zemin üzerinde kendi kreasyonunu tasarla! City, Classic, Creator, Technic ve Doğa parçaları arasından seç, rengini belirle ve inşa et.
+            </p>
+          </motion.div>
+          <div className="border-t border-zinc-200 dark:border-zinc-800">
+            <LegoDesigner />
+          </div>
+        </div>
+      </section>
 
       {/* Mini Games & Social Section */}
       <section id="games" className="py-24 px-6 bg-zinc-100 dark:bg-zinc-900 border-y border-zinc-200 dark:border-zinc-800">
